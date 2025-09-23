@@ -1,5 +1,5 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -37,6 +37,8 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --font-inter: "Inter", var(--default-font-family);
+  --font-jetbrains-mono: "JetBrains Mono", var(--default-mono-font-family);
 }
 
 .dark {
@@ -75,8 +77,14 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --default-font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+    "Noto Color Emoji";
+  --default-mono-font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Update font variables to use Inter and JetBrains Mono */
+  --font-sans: var(--font-inter), var(--default-font-family);
+  --font-mono: var(--font-jetbrains-mono), var(--default-mono-font-family);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
