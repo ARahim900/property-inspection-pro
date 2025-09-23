@@ -14,50 +14,8 @@ import type {
 } from "./types"
 import { INSPECTION_CATEGORIES, MOCK_CLIENTS } from "./constants"
 
-import { useInspections as useSupabaseInspections } from "./hooks/use-inspections"
-
-// --- Local Storage Hooks ---
-const useInspections = () => {
-  const getInspections = (): InspectionData[] => {
-    try {
-      const inspections = JSON.parse(localStorage.getItem("inspections") || "[]") as InspectionData[]
-      return inspections.sort((a, b) => new Date(b.inspectionDate).getTime() - new Date(a.inspectionDate).getTime())
-    } catch (error) {
-      console.error("Error parsing inspections from localStorage", error)
-      return []
-    }
-  }
-
-  const getInspectionById = (id: string): InspectionData | null => {
-    const inspections = getInspections()
-    return inspections.find((insp) => insp.id === id) || null
-  }
-
-  const saveInspection = (inspectionData: InspectionData): void => {
-    try {
-      const inspections = getInspections().filter((insp) => insp.id !== inspectionData.id)
-      inspections.push(inspectionData)
-      localStorage.setItem("inspections", JSON.stringify(inspections))
-    } catch (error) {
-      console.error("Failed to save inspection:", error)
-      if (
-        error instanceof DOMException &&
-        (error.name === "QuotaExceededError" || error.name === "NS_ERROR_DOM_QUOTA_REACHED")
-      ) {
-        alert("Could not save inspection. The browser storage is full. Please try removing old inspections or photos.")
-      } else {
-        alert("An unexpected error occurred while saving. Please check the console for details.")
-      }
-    }
-  }
-
-  const deleteInspection = (id: string): void => {
-    const inspections = getInspections().filter((insp) => insp.id !== id)
-    localStorage.setItem("inspections", JSON.JSON.stringify(inspections))
-  }
-
-  return { getInspections, getInspectionById, saveInspection, deleteInspection }
-}
+import { useInspections } from "./hooks/use-inspections"
+import { useAuth, AuthProvider } from "./hooks/use-auth"
 
 const useClients = () => {
   const getClients = (): Client[] => {
@@ -618,12 +576,13 @@ const InspectionForm: React.FC<{ inspectionId?: string; onSave: () => void; onCa
   onSave,
   onCancel,
 }) => {
-  const { getInspectionById, saveInspection } = useSupabaseInspections()
+  const { getInspectionById, saveInspection } = useInspections()
   const [inspection, setInspection] = useState<InspectionData | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     if (inspectionId) {
+      // Avoid including getInspectionById in deps to prevent state resets on re-render
       setInspection(getInspectionById(inspectionId))
     } else {
       const today = new Date()
@@ -639,7 +598,7 @@ const InspectionForm: React.FC<{ inspectionId?: string; onSave: () => void; onCa
         areas: [{ id: Date.now(), name: "General", items: [] }],
       })
     }
-  }, [inspectionId, getInspectionById])
+  }, [inspectionId])
 
   const handleUpdateField = (field: keyof InspectionData, value: any) => {
     if (inspection) {
@@ -1570,6 +1529,7 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>(getSettings())
   const [currentView, setCurrentView] = useState<string>("dashboard")
   const [currentInspectionId, setCurrentInspectionId] = useState<string | null>(null)
+  const { user, loading } = useAuth()
 
   useEffect(() => {
     document.documentElement.className = settings.theme
@@ -1579,6 +1539,24 @@ const App: React.FC = () => {
     setSettings(newSettings)
     saveSettings(newSettings)
     document.documentElement.className = newSettings.theme
+  }
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600 dark:text-slate-400">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Redirect to login if not authenticated
+  if (!user) {
+    window.location.href = '/auth/login'
+    return null
   }
 
   const renderContent = () => {
@@ -1712,4 +1690,13 @@ const App: React.FC = () => {
   )
 }
 
-export default App
+// Main App with Auth Provider
+const AppWithAuth: React.FC = () => {
+  return (
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  )
+}
+
+export default AppWithAuth

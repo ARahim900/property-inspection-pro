@@ -1,43 +1,28 @@
-// Mock Supabase server client for demo purposes
-// In a production app, you would use the real @supabase/ssr package
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
-interface MockSupabaseClient {
-  auth: {
-    getUser: () => Promise<{ data: { user: any }; error: any }>
-  }
-  from: (table: string) => {
-    select: (columns?: string) => Promise<{ data: any[]; error: any }>
-    insert: (data: any) => Promise<{ data: any; error: any }>
-    update: (data: any) => Promise<{ data: any; error: any }>
-    delete: () => Promise<{ data: any; error: any }>
-  }
-}
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key'
 
-export async function createClient(): Promise<MockSupabaseClient> {
-  return {
-    auth: {
-      getUser: async () => {
-        // Mock user for demo
-        return {
-          data: { user: { id: "1", email: "demo@example.com" } },
-          error: null,
+export async function createClient() {
+  const cookieStore = await cookies()
+
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          )
+        } catch {
+          // The `setAll` method was called from a Server Component.
+          // This can be ignored if you have middleware refreshing
+          // user sessions.
         }
       },
     },
-    from: (table: string) => ({
-      select: async (columns?: string) => {
-        // Mock data for demo
-        return { data: [], error: null }
-      },
-      insert: async (data: any) => {
-        return { data: data, error: null }
-      },
-      update: async (data: any) => {
-        return { data: data, error: null }
-      },
-      delete: async () => {
-        return { data: null, error: null }
-      },
-    }),
-  }
+  })
 }
