@@ -945,7 +945,7 @@ const InspectionReport: React.FC<{ inspectionId: string; onBack: () => void; onE
   onBack,
   onEdit,
 }) => {
-  const { getInspectionById } = useSupabaseInspections()
+  const { getInspectionById } = useInspections()
   const [inspection, setInspection] = useState<InspectionData | null>(null)
   const [isExporting, setIsExporting] = useState(false)
 
@@ -1128,7 +1128,7 @@ const InspectionsDashboard: React.FC<{
   onEdit: (id: string) => void
   onCreate: () => void
 }> = ({ onView, onEdit, onCreate }) => {
-  const { inspections, deleteInspection, loading } = useSupabaseInspections()
+  const { inspections, deleteInspection, loading } = useInspections()
   const [filter, setFilter] = useState<string>("All")
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -1148,7 +1148,7 @@ const InspectionsDashboard: React.FC<{
     }
   }
 
-  const filteredInspections = inspections.filter((insp) => filter === "All" || insp.propertyType === filter)
+  const filteredInspections = inspections.filter((insp: InspectionData) => filter === "All" || insp.propertyType === filter)
 
   if (loading) {
     return (
@@ -1189,7 +1189,7 @@ const InspectionsDashboard: React.FC<{
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border dark:border-slate-700">
         {filteredInspections.length > 0 ? (
           <ul className="divide-y divide-slate-200 dark:divide-slate-700">
-            {filteredInspections.map((insp) => (
+            {filteredInspections.map((insp: InspectionData) => (
               <li
                 key={insp.id}
                 className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
@@ -1377,7 +1377,7 @@ const SimplePieChart: React.FC<{ data: { name: string; value: number; fill: stri
 }
 
 const DashboardOverview: React.FC = () => {
-  const { inspections } = useSupabaseInspections()
+  const { inspections } = useInspections()
   const { getClients } = useClients()
   const { getInvoices } = useInvoices()
 
@@ -1392,8 +1392,8 @@ const DashboardOverview: React.FC = () => {
   // Calculate stats
   const totalInspections = inspections.length
   const totalClients = clients.length
-  const totalRevenue = invoices.reduce((sum, inv) => sum + inv.amount, 0)
-  const pendingInvoices = invoices.filter((inv) => inv.status === "Pending").length
+  const totalRevenue = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0)
+  const pendingInvoices = invoices.filter((inv) => inv.status === "Unpaid").length
 
   // Chart data
   const monthlyData = [
@@ -1501,7 +1501,7 @@ const DashboardOverview: React.FC = () => {
       <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Recent Inspections</h3>
         <div className="space-y-3">
-          {inspections.slice(0, 5).map((inspection) => (
+          {inspections.slice(0, 5).map((inspection: InspectionData) => (
             <div
               key={inspection.id}
               className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg"
