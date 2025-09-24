@@ -15,37 +15,12 @@ import type {
 import { INSPECTION_CATEGORIES, MOCK_CLIENTS } from "./constants"
 
 import { useInspections } from "./hooks/use-inspections"
+import { useClients } from "./hooks/use-clients"
 import { useAuth, AuthProvider } from "./hooks/use-auth"
+import { ClientSection } from "./components/client-section"
+import { EnhancedInspectionForm } from "./components/enhanced-inspection-form"
 
-const useClients = () => {
-  const getClients = (): Client[] => {
-    try {
-      const clients = localStorage.getItem("clients")
-      if (clients) {
-        return JSON.parse(clients) as Client[]
-      }
-      // If no clients, load mock data and save it
-      localStorage.setItem("clients", JSON.stringify(MOCK_CLIENTS))
-      return MOCK_CLIENTS
-    } catch (error) {
-      console.error("Error parsing clients from localStorage", error)
-      return []
-    }
-  }
-
-  const saveClient = (clientData: Client): void => {
-    const clients = getClients().filter((c) => c.id !== clientData.id)
-    clients.push(clientData)
-    localStorage.setItem("clients", JSON.stringify(clients))
-  }
-
-  const deleteClient = (id: string): void => {
-    const clients = getClients().filter((c) => c.id !== id)
-    localStorage.setItem("clients", JSON.stringify(clients))
-  }
-
-  return { getClients, saveClient, deleteClient }
-}
+// Removed local useClients hook - now using Supabase-based hook from hooks/use-clients.tsx
 
 const useInvoices = () => {
   const getInvoices = (): Invoice[] => {
@@ -1723,7 +1698,7 @@ const App: React.FC = () => {
         )
       case "form":
         return (
-          <InspectionForm
+          <EnhancedInspectionForm
             inspectionId={currentInspectionId || undefined}
             onSave={() => setCurrentView("inspections")}
             onCancel={() => setCurrentView("inspections")}
@@ -1743,7 +1718,7 @@ const App: React.FC = () => {
           <div>Report not found</div>
         )
       case "clients":
-        return <PlaceholderPage title="Client Management" />
+        return <ClientSection />
       case "invoices":
         return <PlaceholderPage title="Invoice Management" />
       case "settings":
