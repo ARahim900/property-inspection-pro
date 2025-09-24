@@ -78,13 +78,18 @@ export function useInspections() {
 
   // Save inspection (create or update)
   const saveInspection = async (inspection: InspectionData): Promise<string> => {
-    if (!user) throw new Error("User not authenticated")
+    if (!user) {
+      const error = new Error("Please login to save inspections")
+      console.error(error.message)
+      throw error
+    }
 
     try {
       console.log("Saving inspection:", inspection)
 
       // Check if this is an update or create
-      const isUpdate = inspection.id && inspection.id.startsWith('insp_') === false
+      // UUIDs from database don't have prefixes, temp IDs do
+      const isUpdate = inspection.id && !inspection.id.startsWith('insp_') && inspection.id.length === 36
 
       if (isUpdate) {
         // Update existing inspection
@@ -131,19 +136,26 @@ export function useInspections() {
         // Save areas and items
         await saveInspectionAreas(inspectionData.id, inspection.areas, user.id)
 
-        // Update local state with the new ID
-        setInspections(prev => {
-          const updated = prev.map(insp => 
-            insp.id === inspection.id ? { ...insp, id: inspectionData.id } : insp
-          )
-          return updated
-        })
+        // Refresh inspections to get the new data
+        await fetchInspections()
 
         return inspectionData.id
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving inspection:", error)
-      throw error
+
+      // Provide more specific error messages
+      if (error?.message?.includes('relation "inspections" does not exist')) {
+        throw new Error("Database tables not set up. Please follow the setup instructions in DATABASE_SETUP.md")
+      } else if (error?.message?.includes('permission denied')) {
+        throw new Error("Permission denied. Please make sure you're logged in.")
+      } else if (error?.message?.includes('violates foreign key constraint')) {
+        throw new Error("Invalid data reference. Please refresh the page and try again.")
+      } else if (error?.code === 'PGRST301') {
+        throw new Error("Database tables not found. Please run the database migration first.")
+      } else {
+        throw new Error(error?.message || "Failed to save inspection. Please try again.")
+      }
     }
   }
 
@@ -182,17 +194,61 @@ export function useInspections() {
         if (itemError) throw itemError
 
         // Save photos for this item
-        for (const photo of item.photos) {
-          await supabase
-            .from("inspection_photos")
-            .insert({
-              user_id: userId,
-              inspection_id: inspectionId,
-              area_id: areaData.id,
-              item_id: itemData.id,
-              name: photo.name,
-              base64_data: photo.base64
-            })
+        if (item.photos && item.photos.length > 0) {
+          for (const photo of item.photos) {
+            try {
+              // First, try to upload to storage if base64 data is available
+              let storageUrl = null
+
+              if (photo.base64) {
+                // Convert base64 to blob
+                const base64Data = photo.base64.replace(/^data:image\/\w+;base64,/, '')
+                const byteCharacters = atob(base64Data)
+                const byteNumbers = new Array(byteCharacters.length)
+                for (let i = 0; i < byteCharacters.length; i++) {
+                  byteNumbers[i] = byteCharacters.charCodeAt(i)
+                }
+                const byteArray = new Uint8Array(byteNumbers)
+                const blob = new Blob([byteArray], { type: 'image/jpeg' })
+
+                // Upload to storage
+                const fileName = `${userId}/${inspectionId}/${itemData.id}/${Date.now()}_${photo.name}`
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                  .from('inspection-photos')
+                  .upload(fileName, blob, {
+                    cacheControl: '3600',
+                    upsert: false
+                  })
+
+                if (!uploadError && uploadData) {
+                  const { data: urlData } = supabase.storage
+                    .from('inspection-photos')
+                    .getPublicUrl(fileName)
+                  storageUrl = urlData.publicUrl
+                }
+              }
+
+              // Save photo record in database
+              const { error: photoError } = await supabase
+                .from("inspection_photos")
+                .insert({
+                  user_id: userId,
+                  inspection_id: inspectionId,
+                  area_id: areaData.id,
+                  item_id: itemData.id,
+                  name: photo.name,
+                  storage_url: storageUrl,
+                  base64_data: storageUrl ? null : photo.base64 // Only save base64 if storage upload failed
+                })
+
+              if (photoError) {
+                console.error("Error saving photo record:", photoError)
+              }
+            } catch (error) {
+              console.error("Error processing photo:", error)
+              // Continue with other photos even if one fails
+            }
+          }
         }
       }
     }

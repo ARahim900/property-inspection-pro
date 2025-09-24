@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
 import { AuthProvider } from "@/hooks/use-auth"
+import { ConfigWarningBanner } from "@/components/config-warning-banner"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -29,6 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans ${inter.variable} ${jetbrainsMono.variable}`}>
+        <ConfigWarningBanner />
         <Suspense fallback={<div>Loading...</div>}>
           <AuthProvider>{children}</AuthProvider>
         </Suspense>

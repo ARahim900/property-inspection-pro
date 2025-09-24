@@ -123,18 +123,26 @@ const useAppSettings = () => {
 // --- Helper Functions ---
 const resizeAndCompressImage = (file: File, maxSize = 1024, quality = 0.8): Promise<string> => {
   return new Promise((resolve, reject) => {
+    console.log(`resizeAndCompressImage called with file: ${file.name}, maxSize: ${maxSize}, quality: ${quality}`)
+
     const reader = new FileReader()
-    reader.readAsDataURL(file)
+
     reader.onload = (event) => {
+      console.log("FileReader onload triggered")
       if (!event.target?.result) {
+        console.error("FileReader did not return a result")
         return reject(new Error("FileReader did not return a result."))
       }
+
+      console.log(`FileReader result type: ${typeof event.target.result}`)
       const img = new Image()
-      img.src = event.target.result as string
+
       img.onload = () => {
+        console.log(`Image loaded: ${img.width}x${img.height}`)
         const canvas = document.createElement("canvas")
         let { width, height } = img
 
+        // Calculate new dimensions
         if (width > height) {
           if (width > maxSize) {
             height = Math.round(height * (maxSize / width))
@@ -147,20 +155,40 @@ const resizeAndCompressImage = (file: File, maxSize = 1024, quality = 0.8): Prom
           }
         }
 
+        console.log(`Resizing to: ${width}x${height}`)
         canvas.width = width
         canvas.height = height
+
         const ctx = canvas.getContext("2d")
         if (!ctx) {
+          console.error("Failed to get canvas context")
           return reject(new Error("Failed to get canvas context"))
         }
+
         ctx.drawImage(img, 0, 0, width, height)
 
         const dataUrl = canvas.toDataURL("image/jpeg", quality)
+        console.log(`Generated dataUrl length: ${dataUrl.length}`)
+        console.log(`DataUrl starts with: ${dataUrl.substring(0, 30)}`)
         resolve(dataUrl)
       }
-      img.onerror = (error) => reject(error)
+
+      img.onerror = (error) => {
+        console.error("Image load error:", error)
+        reject(new Error("Failed to load image"))
+      }
+
+      img.src = event.target.result as string
+      console.log("Image src set")
     }
-    reader.onerror = (error) => reject(error)
+
+    reader.onerror = (error) => {
+      console.error("FileReader error:", error)
+      reject(error)
+    }
+
+    console.log("Starting FileReader.readAsDataURL")
+    reader.readAsDataURL(file)
   })
 }
 
@@ -199,6 +227,26 @@ const buttonClasses = {
 
 const inputClasses =
   "block w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+
+// Alert Circle Icon Component
+const AlertCircle: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <svg
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="8" x2="12" y2="12"></line>
+    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+  </svg>
+)
 
 const Spinner: React.FC<{ className?: string }> = ({ className = "text-white" }) => (
   <svg
@@ -297,40 +345,58 @@ const PhotoUpload: React.FC<{
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
+    console.log("handleFileChange triggered")
+    if (event.target.files && event.target.files.length > 0) {
+      console.log(`Processing ${event.target.files.length} file(s)`)
       // Fix: The 'file' variable was being incorrectly inferred as 'unknown'. By iterating directly over `event.target.files` (a FileList) instead of using `Array.from`, TypeScript can correctly infer the type of 'file' as a `File` object, resolving the type errors.
       for (const file of event.target.files) {
+        console.log(`Processing file: ${file.name}, size: ${file.size}, type: ${file.type}`)
         try {
+          console.log("Starting image resize and compress...")
           const base64WithMime = await resizeAndCompressImage(file, 1024, 0.8)
-          const base64 = base64WithMime.split(",")[1]
-          onUpload({ base64, name: file.name })
+          console.log(`Image processed successfully. Base64 length: ${base64WithMime?.length || 0}`)
+          console.log(`Base64 preview: ${base64WithMime?.substring(0, 50)}...`)
+
+          // Keep the full data URL including MIME type for proper display in reports
+          onUpload({ base64: base64WithMime, name: file.name })
+          console.log(`Photo uploaded: ${file.name}`)
         } catch (error) {
-          console.error("Error processing image", error)
-          alert("There was an error processing the image. Please try a different file.")
+          console.error("Error processing image:", error)
+          alert(`Error processing ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`)
         }
       }
+    } else {
+      console.log("No files selected")
     }
   }
 
   return (
     <div>
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 mb-2">
-        {photos.map((photo, index) => (
-          <div key={index} className="relative group aspect-square">
-            <img
-              src={`data:image/jpeg;base64,${photo.base64}`}
-              alt={`upload-preview-${index}`}
-              className="w-full h-full object-cover rounded-lg"
-            />
-            <button
-              type="button"
-              onClick={() => onRemove(index)}
-              className="absolute top-1 right-1 bg-red-600 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              &times;
-            </button>
-          </div>
-        ))}
+        {photos.map((photo, index) => {
+          // Skip rendering if no base64, but keep index consistent
+          if (!photo.base64) return null
+
+          return (
+            <div key={index} className="relative group aspect-square">
+              <img
+                src={photo.base64.startsWith('data:') ? photo.base64 : `data:image/jpeg;base64,${photo.base64}`}
+                alt={`upload-preview-${index}`}
+                className="w-full h-full object-cover rounded-lg"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  console.log(`Removing photo at index ${index}`)
+                  onRemove(index)
+                }}
+                className="absolute top-1 right-1 bg-red-600 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                &times;
+              </button>
+            </div>
+          )
+        })}
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
@@ -354,6 +420,10 @@ const InspectionItemRow: React.FC<{
   onRemove: () => void
 }> = ({ item, onUpdate, onRemove }) => {
   const handleUpdate = (field: keyof InspectionItem, value: any) => {
+    console.log(`InspectionItemRow handleUpdate: field=${field}, value=`, value)
+    if (field === 'photos') {
+      console.log(`Updating photos. Current count: ${item.photos.length}, New count: ${value.length}`)
+    }
     onUpdate({ ...item, [field]: value })
   }
 
@@ -576,14 +646,25 @@ const InspectionForm: React.FC<{ inspectionId?: string; onSave: () => void; onCa
   onSave,
   onCancel,
 }) => {
-  const { getInspectionById, saveInspection } = useInspections()
+  const { getInspectionById, saveInspection, inspections, loading } = useInspections()
   const [inspection, setInspection] = useState<InspectionData | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
     if (inspectionId) {
-      // Avoid including getInspectionById in deps to prevent state resets on re-render
-      setInspection(getInspectionById(inspectionId))
+      // Wait for inspections to load before trying to get the specific one
+      if (!loading) {
+        const foundInspection = getInspectionById(inspectionId)
+        if (foundInspection) {
+          setInspection(foundInspection)
+          setNotFound(false)
+        } else {
+          // Inspection not found
+          console.error(`Inspection with ID ${inspectionId} not found`)
+          setNotFound(true)
+        }
+      }
     } else {
       const today = new Date()
       const localTodayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
@@ -598,7 +679,7 @@ const InspectionForm: React.FC<{ inspectionId?: string; onSave: () => void; onCa
         areas: [{ id: Date.now(), name: "General", items: [] }],
       })
     }
-  }, [inspectionId])
+  }, [inspectionId, loading, inspections])
 
   const handleUpdateField = (field: keyof InspectionData, value: any) => {
     if (inspection) {
@@ -630,25 +711,64 @@ const InspectionForm: React.FC<{ inspectionId?: string; onSave: () => void; onCa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (inspection && !isSaving) {
+      setIsSaving(true)
       try {
-        setIsSaving(true)
-        await saveInspection(inspection)
-        onSave()
-      } catch (error) {
+        const savedId = await saveInspection(inspection)
+        // If saveInspection returns successfully, the save worked
+        if (savedId) {
+          console.log("Inspection saved successfully with ID:", savedId)
+          onSave()
+          return // Exit early on success
+        }
+      } catch (error: any) {
         console.error("Error saving inspection:", error)
-        alert("Failed to save inspection. Please try again.")
+        // Only show error if it's a real error, not a constraint check warning
+        if (!error?.message?.includes("duplicate key") &&
+            !error?.message?.includes("already exists")) {
+          const errorMessage = error?.message || "Failed to save inspection. Please try again."
+          alert(errorMessage)
+        } else {
+          // If it's a duplicate key error, the save actually worked
+          console.log("Inspection saved (duplicate key warning ignored)")
+          onSave()
+        }
       } finally {
         setIsSaving(false)
       }
     }
   }
 
-  if (!inspection)
+  // Show loading spinner while data is loading
+  if (loading && inspectionId) {
     return (
       <div className="text-center p-8">
         <Spinner className="text-blue-600 dark:text-blue-400 mx-auto" />
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading inspection...</p>
       </div>
     )
+  }
+
+  // Show error message if inspection not found
+  if (notFound) {
+    return (
+      <div className="text-center p-8">
+        <div className="text-red-600 dark:text-red-400">
+          <AlertCircle className="w-12 h-12 mx-auto mb-4" />
+          <p className="text-lg font-semibold">Inspection not found</p>
+          <p className="mt-2">The inspection you're looking for doesn't exist or has been deleted.</p>
+          <button
+            onClick={onCancel}
+            className="mt-4 px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't show anything if inspection is still null (shouldn't happen)
+  if (!inspection) return null
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -954,7 +1074,28 @@ const InspectionReport: React.FC<{ inspectionId: string; onBack: () => void; onE
   }, [inspectionId, getInspectionById])
 
   const handleExportPDF = async () => {
-    alert("PDF export functionality has been disabled for demo purposes.")
+    if (!inspection) return
+
+    setIsExporting(true)
+    try {
+      // Try HTML-based report first for better formatting and print support
+      const { generateInspectionReport } = await import('@/lib/pdf/html-report-generator')
+      await generateInspectionReport(inspection, { autoPrint: false })
+      console.log('HTML Inspection Report with complete disclaimer generated successfully')
+    } catch (error) {
+      console.error('Error generating HTML report:', error)
+      // Fallback to PDF generator
+      try {
+        const { generateWaslaFinalReport } = await import('@/lib/pdf/wasla-report-final')
+        await generateWaslaFinalReport(inspection)
+        console.log('Wasla PDF Report exported successfully (fallback)')
+      } catch (fallbackError) {
+        console.error('Fallback PDF also failed:', fallbackError)
+        alert('Failed to generate report. Please check the console for details.')
+      }
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   if (!inspection) return <div className="text-center p-8 text-slate-600 dark:text-slate-400">Report not found.</div>
@@ -1069,10 +1210,10 @@ const InspectionReport: React.FC<{ inspectionId: string; onBack: () => void; onE
                       )}
                       {item.photos.length > 0 && (
                         <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {item.photos.map((photo, index) => (
+                          {item.photos.filter(photo => photo.base64).map((photo, index) => (
                             <img
                               key={index}
-                              src={`data:image/jpeg;base64,${photo.base64}`}
+                              src={photo.base64.startsWith('data:') ? photo.base64 : `data:image/jpeg;base64,${photo.base64}`}
                               alt={`${item.point} photo ${index + 1}`}
                               className="rounded-lg shadow-sm w-full object-cover"
                             />

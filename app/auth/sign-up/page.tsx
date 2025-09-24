@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { createClient } from "@/lib/supabase/client"
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -22,15 +22,31 @@ export default function SignUpPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
+    // Validate passwords match
     if (password !== repeatPassword) {
-      setError("Passwords do not match")
+      setError("Passwords do not match. Please ensure both passwords are identical.")
       setIsLoading(false)
       return
     }
+
+    // Validate password strength
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.")
+      setIsLoading(false)
+      return
+    }
+
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured()) {
+      setError("Authentication service is not configured. Please contact the administrator.")
+      setIsLoading(false)
+      return
+    }
+
+    const supabase = createClient()
 
     try {
       const { error } = await supabase.auth.signUp({
@@ -43,10 +59,34 @@ export default function SignUpPage() {
           },
         },
       })
-      if (error) throw error
+
+      if (error) {
+        // Provide more user-friendly error messages
+        if (error.message.includes("already registered")) {
+          setError("This email is already registered. Please login or use a different email.")
+        } else if (error.message.includes("invalid email")) {
+          setError("Please enter a valid email address.")
+        } else if (error.message.includes("weak password")) {
+          setError("Password is too weak. Please use a stronger password with at least 6 characters.")
+        } else if (error.message.includes("fetch")) {
+          setError("Unable to connect to the authentication service. Please check your internet connection or try again later.")
+        } else {
+          setError(error.message)
+        }
+        return
+      }
+
+      // Successfully created account
       router.push("/auth/sign-up-success")
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
+      // Handle network and other errors
+      if (error instanceof TypeError && error.message.includes("fetch")) {
+        setError("Network error: Unable to connect to the authentication service. Please check your internet connection.")
+      } else if (error instanceof Error) {
+        setError(`An error occurred: ${error.message}`)
+      } else {
+        setError("An unexpected error occurred. Please try again.")
+      }
     } finally {
       setIsLoading(false)
     }

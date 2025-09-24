@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { createClient } from "@/lib/supabase/client"
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -20,23 +20,53 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
+
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured()) {
+      setError("Authentication service is not configured. Please contact the administrator.")
+      setIsLoading(false)
+      return
+    }
+
+    const supabase = createClient()
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
-      if (error) throw error
-      
+
+      if (error) {
+        // Provide more user-friendly error messages
+        if (error.message.includes("Invalid login credentials")) {
+          setError("Invalid email or password. Please check your credentials and try again.")
+        } else if (error.message.includes("Email not confirmed")) {
+          setError("Please confirm your email address before logging in. Check your inbox for a confirmation link.")
+        } else if (error.message.includes("fetch")) {
+          setError("Unable to connect to the authentication service. Please check your internet connection or try again later.")
+        } else {
+          setError(error.message)
+        }
+        return
+      }
+
       // Check if login was successful
       if (data.user) {
         router.push("/")
+      } else {
+        setError("Login failed. Please try again.")
       }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
+      // Handle network and other errors
+      if (error instanceof TypeError && error.message.includes("fetch")) {
+        setError("Network error: Unable to connect to the authentication service. Please check your internet connection.")
+      } else if (error instanceof Error) {
+        setError(`An error occurred: ${error.message}`)
+      } else {
+        setError("An unexpected error occurred. Please try again.")
+      }
     } finally {
       setIsLoading(false)
     }
