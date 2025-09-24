@@ -60,7 +60,7 @@ export function useInspections() {
             comments: item.comments || '',
             location: item.location || '',
             photos: (item.inspection_photos || []).map((photo: any) => ({
-              base64: photo.base64_data,
+              base64: photo.base64_data || photo.storage_url,
               name: photo.name
             }))
           }))
@@ -195,40 +195,50 @@ export function useInspections() {
 
         // Save photos for this item
         if (item.photos && item.photos.length > 0) {
+          console.log(`Saving ${item.photos.length} photos for item ${itemData.id}`)
           for (const photo of item.photos) {
             try {
+              console.log(`Processing photo: ${photo.name}, has base64: ${!!photo.base64}`)
+
               // First, try to upload to storage if base64 data is available
               let storageUrl = null
 
               if (photo.base64) {
-                // Convert base64 to blob
-                const base64Data = photo.base64.replace(/^data:image\/\w+;base64,/, '')
-                const byteCharacters = atob(base64Data)
-                const byteNumbers = new Array(byteCharacters.length)
-                for (let i = 0; i < byteCharacters.length; i++) {
-                  byteNumbers[i] = byteCharacters.charCodeAt(i)
-                }
-                const byteArray = new Uint8Array(byteNumbers)
-                const blob = new Blob([byteArray], { type: 'image/jpeg' })
+                try {
+                  // Convert base64 to blob
+                  const base64Data = photo.base64.replace(/^data:image\/\w+;base64,/, '')
+                  const byteCharacters = atob(base64Data)
+                  const byteNumbers = new Array(byteCharacters.length)
+                  for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i)
+                  }
+                  const byteArray = new Uint8Array(byteNumbers)
+                  const blob = new Blob([byteArray], { type: 'image/jpeg' })
 
-                // Upload to storage
-                const fileName = `${userId}/${inspectionId}/${itemData.id}/${Date.now()}_${photo.name}`
-                const { data: uploadData, error: uploadError } = await supabase.storage
-                  .from('inspection-photos')
-                  .upload(fileName, blob, {
-                    cacheControl: '3600',
-                    upsert: false
-                  })
-
-                if (!uploadError && uploadData) {
-                  const { data: urlData } = supabase.storage
+                  // Upload to storage
+                  const fileName = `${userId}/${inspectionId}/${itemData.id}/${Date.now()}_${photo.name}`
+                  const { data: uploadData, error: uploadError } = await supabase.storage
                     .from('inspection-photos')
-                    .getPublicUrl(fileName)
-                  storageUrl = urlData.publicUrl
+                    .upload(fileName, blob, {
+                      cacheControl: '3600',
+                      upsert: false
+                    })
+
+                  if (uploadError) {
+                    console.warn(`Storage upload failed for ${photo.name}:`, uploadError)
+                  } else if (uploadData) {
+                    const { data: urlData } = supabase.storage
+                      .from('inspection-photos')
+                      .getPublicUrl(fileName)
+                    storageUrl = urlData.publicUrl
+                    console.log(`Photo uploaded to storage: ${storageUrl}`)
+                  }
+                } catch (uploadError) {
+                  console.warn(`Failed to upload photo ${photo.name} to storage:`, uploadError)
                 }
               }
 
-              // Save photo record in database
+              // Save photo record in database - always save base64 as fallback
               const { error: photoError } = await supabase
                 .from("inspection_photos")
                 .insert({
@@ -238,14 +248,16 @@ export function useInspections() {
                   item_id: itemData.id,
                   name: photo.name,
                   storage_url: storageUrl,
-                  base64_data: storageUrl ? null : photo.base64 // Only save base64 if storage upload failed
+                  base64_data: photo.base64 // Always save base64 data
                 })
 
               if (photoError) {
-                console.error("Error saving photo record:", photoError)
+                console.error(`Error saving photo record for ${photo.name}:`, photoError)
+              } else {
+                console.log(`Photo record saved for ${photo.name} with base64 data`)
               }
             } catch (error) {
-              console.error("Error processing photo:", error)
+              console.error(`Error processing photo ${photo.name}:`, error)
               // Continue with other photos even if one fails
             }
           }
