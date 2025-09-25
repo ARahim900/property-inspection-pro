@@ -39,10 +39,10 @@ export async function generateWaslaInspectionPDF(inspection: InspectionData): Pr
 
     doc.setTextColor(255, 255, 255)
     doc.setFontSize(18)
-    doc.setFont(undefined, 'bold')
+    doc.setFont('helvetica', 'bold')
     doc.text('WASLA REAL ESTATE SOLUTIONS', pageWidth / 2, 10, { align: 'center' })
     doc.setFontSize(10)
-    doc.setFont(undefined, 'normal')
+    doc.setFont('helvetica', 'normal')
     doc.text('وصلة للحلول العقارية', pageWidth / 2, 17, { align: 'center' })
     doc.setTextColor(0, 0, 0)
   }
@@ -53,7 +53,7 @@ export async function generateWaslaInspectionPDF(inspection: InspectionData): Pr
 
   // Title
   doc.setFontSize(22)
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.setTextColor(0, 47, 108)
   doc.text('PROPERTY INSPECTION REPORT', pageWidth / 2, currentY, { align: 'center' })
   currentY += 8
@@ -67,7 +67,7 @@ export async function generateWaslaInspectionPDF(inspection: InspectionData): Pr
   doc.roundedRect(margin, currentY, contentWidth, 50, 3, 3, 'F')
 
   doc.setFontSize(12)
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   currentY += 8
 
   // Two-column layout for property details
@@ -77,35 +77,35 @@ export async function generateWaslaInspectionPDF(inspection: InspectionData): Pr
 
   // Client Name
   doc.text('Client Name:', leftColumn, detailY)
-  doc.setFont(undefined, 'normal')
+  doc.setFont('helvetica', 'normal')
   doc.text(inspection.clientName || 'Not Specified', leftColumn + 30, detailY)
 
   // Property Location
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.text('Property:', rightColumn, detailY)
-  doc.setFont(undefined, 'normal')
+  doc.setFont('helvetica', 'normal')
   const location = inspection.propertyLocation || 'Not Specified'
   const locationLines = doc.splitTextToSize(location, 70)
   doc.text(locationLines[0], rightColumn + 20, detailY)
   detailY += 8
 
   // Property Type
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.text('Type:', leftColumn, detailY)
-  doc.setFont(undefined, 'normal')
+  doc.setFont('helvetica', 'normal')
   doc.text(inspection.propertyType || 'Not Specified', leftColumn + 30, detailY)
 
   // Inspector
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.text('Inspector:', rightColumn, detailY)
-  doc.setFont(undefined, 'normal')
+  doc.setFont('helvetica', 'normal')
   doc.text(inspection.inspectorName || 'Wasla Inspector', rightColumn + 20, detailY)
   detailY += 8
 
   // Inspection Date
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.text('Date:', leftColumn, detailY)
-  doc.setFont(undefined, 'normal')
+  doc.setFont('helvetica', 'normal')
   const inspectionDate = inspection.inspectionDate
     ? new Date(inspection.inspectionDate).toLocaleDateString('en-GB', {
         day: '2-digit',
@@ -116,9 +116,9 @@ export async function generateWaslaInspectionPDF(inspection: InspectionData): Pr
   doc.text(inspectionDate, leftColumn + 30, detailY)
 
   // Report ID
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.text('Report ID:', rightColumn, detailY)
-  doc.setFont(undefined, 'normal')
+  doc.setFont('helvetica', 'normal')
   const reportId = `WASLA-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`
   doc.text(reportId, rightColumn + 20, detailY)
 
@@ -130,14 +130,14 @@ export async function generateWaslaInspectionPDF(inspection: InspectionData): Pr
   doc.rect(margin, currentY, contentWidth, 8, 'F')
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(12)
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.text('OVERVIEW / نظرة عامة', margin + 3, currentY + 5.5)
   doc.setTextColor(0, 0, 0)
   currentY += 12
 
   // Dear Client section
   doc.setFontSize(11)
-  doc.setFont(undefined, 'normal')
+  doc.setFont('helvetica', 'normal')
   const overviewText = `Dear ${inspection.clientName || 'Valued Client'},
 
 Thank you for choosing Wasla Real Estate Solutions to carry out the inspection of your property. This report presents the inspection findings and measurements as documented on site on the date of the visit.
@@ -167,13 +167,13 @@ Please review the attached report carefully before making your final decision. I
     doc.rect(margin, currentY, contentWidth, 8, 'F')
     doc.setTextColor(255, 255, 255)
     doc.setFontSize(12)
-    doc.setFont(undefined, 'bold')
+    doc.setFont('helvetica', 'bold')
     doc.text('EXECUTIVE SUMMARY', margin + 3, currentY + 5.5)
     doc.setTextColor(0, 0, 0)
     currentY += 12
 
     doc.setFontSize(10)
-    doc.setFont(undefined, 'normal')
+    doc.setFont('helvetica', 'normal')
     const summaryLines = doc.splitTextToSize(inspection.aiSummary, contentWidth)
     doc.text(summaryLines, margin, currentY)
     currentY += summaryLines.length * 5 + 10
@@ -185,7 +185,7 @@ Please review the attached report carefully before making your final decision. I
   doc.rect(margin, currentY, contentWidth, 8, 'F')
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(12)
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.text('INSPECTION FINDINGS / نتائج الفحص', margin + 3, currentY + 5.5)
   doc.setTextColor(0, 0, 0)
   currentY += 12
@@ -284,11 +284,11 @@ Please review the attached report carefully before making your final decision. I
   doc.roundedRect(margin, currentY, contentWidth, 35, 3, 3, 'F')
 
   doc.setFontSize(12)
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.text('INSPECTION STATISTICS', margin + 5, currentY + 8)
 
   doc.setFontSize(10)
-  doc.setFont(undefined, 'normal')
+  doc.setFont('helvetica', 'normal')
   doc.text(`Total Items Inspected: ${totalItems}`, margin + 5, currentY + 16)
 
   doc.setTextColor(34, 197, 94)
@@ -303,7 +303,7 @@ Please review the attached report carefully before making your final decision. I
   doc.setTextColor(0, 0, 0)
   if (totalItems > 0) {
     const passRate = Math.round((passCount / (passCount + failCount)) * 100) || 0
-    doc.setFont(undefined, 'bold')
+    doc.setFont('helvetica', 'bold')
     doc.setFontSize(11)
     doc.text(`Overall Pass Rate: ${passRate}%`, margin + 5, currentY + 30)
   }
@@ -318,7 +318,7 @@ Please review the attached report carefully before making your final decision. I
   doc.rect(margin, currentY, contentWidth, 8, 'F')
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(12)
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.text('IMPORTANT NOTICES / ملاحظات مهمة', margin + 3, currentY + 5.5)
   doc.setTextColor(0, 0, 0)
   currentY += 12
@@ -342,10 +342,10 @@ Please review the attached report carefully before making your final decision. I
   doc.setFontSize(10)
   disclaimerSections.forEach(section => {
     checkPageBreak(25)
-    doc.setFont(undefined, 'bold')
+    doc.setFont('helvetica', 'bold')
     doc.text(section.title, margin, currentY)
     currentY += 5
-    doc.setFont(undefined, 'normal')
+    doc.setFont('helvetica', 'normal')
     const lines = doc.splitTextToSize(section.content, contentWidth)
     doc.text(lines, margin, currentY)
     currentY += lines.length * 5 + 8
@@ -356,10 +356,10 @@ Please review the attached report carefully before making your final decision. I
   doc.setFillColor(255, 243, 224)
   doc.roundedRect(margin, currentY, contentWidth, 35, 3, 3, 'F')
   doc.setFontSize(11)
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.setTextColor(133, 77, 14)
   doc.text('CONFIDENTIALITY / السرية', margin + 5, currentY + 8)
-  doc.setFont(undefined, 'normal')
+  doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
   doc.setTextColor(0, 0, 0)
   const confidentialityText = 'This inspection report is prepared exclusively for the client and may not be relied upon by any other person. The report may be shared with relevant parties in the transaction but is not intended to benefit them directly or indirectly.'
@@ -370,7 +370,7 @@ Please review the attached report carefully before making your final decision. I
   // Signature Section
   checkPageBreak(50)
   doc.setFontSize(10)
-  doc.setFont(undefined, 'normal')
+  doc.setFont('helvetica', 'normal')
 
   // Client signature
   doc.text('Client Name / اسم العميل:', margin, currentY)
@@ -401,7 +401,7 @@ Please review the attached report carefully before making your final decision. I
   doc.text('www.waslaoman.com | info@waslaoman.com | +968 90699799', pageWidth / 2, currentY + 20, { align: 'center' })
 
   // Add page numbers to all pages
-  const pageCount = doc.internal.getNumberOfPages()
+  const pageCount = (doc as any).internal.pages.length - 1
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
     doc.setFontSize(8)

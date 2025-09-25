@@ -509,7 +509,7 @@ Our opinion does not study the property value or the engineering of the structur
     doc.text('Wasla Property Solutions CR. 1068375 / وصلة للحلول العقارية س.ت. 1068375', margin + 5, currentY + 11)
 
     // Add footers to all pages
-    const totalPages = doc.internal.getNumberOfPages()
+    const totalPages = (doc as any).internal.pages.length - 1
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i)
       addFooter(i, totalPages)

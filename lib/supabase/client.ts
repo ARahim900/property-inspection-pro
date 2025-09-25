@@ -29,7 +29,7 @@ export function createClient() {
     )
   }
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+  return createBrowserClient(supabaseUrl!, supabaseAnonKey!)
 }
 
 export { isSupabaseConfigured }

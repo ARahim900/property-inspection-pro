@@ -677,7 +677,7 @@ This report was formed as per the client request as a supportive opinion to enab
                        passRate >= 60 ? [251, 191, 36] : [239, 68, 68]
   doc.setFillColor(...lightBg)
   doc.roundedRect(margin + cardWidth + 7.5, currentY, cardWidth, cardHeight, 3, 3, 'F')
-  doc.setDrawColor(...passRateColor)
+  doc.setDrawColor(passRateColor[0], passRateColor[1], passRateColor[2])
   doc.setLineWidth(2)
   doc.roundedRect(margin + cardWidth + 7.5, currentY, cardWidth, cardHeight, 3, 3, 'S')
   doc.setFontSize(9)
@@ -686,7 +686,7 @@ This report was formed as per the client request as a supportive opinion to enab
   doc.text('Pass Rate', margin + cardWidth + 7.5 + cardWidth/2, currentY + 10, { align: 'center' })
   doc.text('نسبة النجاح', margin + cardWidth + 7.5 + cardWidth/2, currentY + 15, { align: 'center' })
   doc.setFontSize(20)
-  doc.setTextColor(...passRateColor)
+  doc.setTextColor(passRateColor[0], passRateColor[1], passRateColor[2])
   doc.text(`${passRate}%`, margin + cardWidth + 7.5 + cardWidth/2, currentY + 27, { align: 'center' })
 
   // Photos Count Card
@@ -809,7 +809,7 @@ This report was formed as per the client request as a supportive opinion to enab
   doc.text('Thank you for choosing Wasla Real Estate Solutions', pageWidth / 2, currentY + 22, { align: 'center' })
 
     // Add footers to all pages
-    const totalPages = doc.internal.getNumberOfPages()
+    const totalPages = (doc as any).internal.pages.length - 1
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i)
     addPageFooter(i, totalPages)

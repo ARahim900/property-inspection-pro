@@ -57,9 +57,9 @@ export async function generateSimplePDF(inspection: InspectionData): Promise<voi
         }
 
         doc.setFontSize(12)
-        doc.setFont(undefined, 'bold')
+        doc.setFont('helvetica', 'bold')
         doc.text(safe(area.name, 'Area'), 20, y)
-        doc.setFont(undefined, 'normal')
+        doc.setFont('helvetica', 'normal')
         y += 8
 
         // Items in area

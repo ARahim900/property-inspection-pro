@@ -468,7 +468,7 @@ Our opinion does not study the property value or the engineering of the structur
   doc.text('Thank you for choosing Wasla Real Estate Solutions', margin + 5, currentY + 14)
 
   // Add footers to all pages
-  const pageCount = doc.internal.getNumberOfPages()
+  const pageCount = (doc as any).internal.pages.length - 1
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
     addFooter(i, pageCount)

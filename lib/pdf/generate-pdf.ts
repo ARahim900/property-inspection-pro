@@ -28,9 +28,9 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   // Title
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(24)
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.text('PROPERTY INSPECTION REPORT', pageWidth / 2, 25, { align: 'center' })
-  doc.setFont(undefined, 'normal')
+  doc.setFont('helvetica', 'normal')
 
   yPosition = 50
 
@@ -42,9 +42,9 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   doc.rect(margin, yPosition, contentWidth, 45, 'F')
 
   doc.setFontSize(14)
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.text('PROPERTY DETAILS', margin + 5, yPosition + 10)
-  doc.setFont(undefined, 'normal')
+  doc.setFont('helvetica', 'normal')
 
   doc.setFontSize(11)
   const details = [
@@ -62,14 +62,14 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   let detailY = yPosition + 20
   details.forEach((detail, index) => {
     if (index % 2 === 0) {
-      doc.setFont(undefined, 'bold')
+      doc.setFont('helvetica', 'bold')
       doc.text(`${detail.label}:`, margin + 5, detailY)
-      doc.setFont(undefined, 'normal')
+      doc.setFont('helvetica', 'normal')
       doc.text(detail.value, margin + 35, detailY)
     } else {
-      doc.setFont(undefined, 'bold')
+      doc.setFont('helvetica', 'bold')
       doc.text(`${detail.label}:`, pageWidth / 2 + 5, detailY)
-      doc.setFont(undefined, 'normal')
+      doc.setFont('helvetica', 'normal')
       doc.text(detail.value, pageWidth / 2 + 35, detailY)
     }
     if (index % 2 === 1) detailY += 8
@@ -82,9 +82,9 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
     checkPageBreak(40)
 
     doc.setFontSize(14)
-    doc.setFont(undefined, 'bold')
+    doc.setFont('helvetica', 'bold')
     doc.text('EXECUTIVE SUMMARY', margin, yPosition)
-    doc.setFont(undefined, 'normal')
+    doc.setFont('helvetica', 'normal')
     yPosition += 8
 
     doc.setFontSize(10)
@@ -96,9 +96,9 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   // Inspection Details Header
   checkPageBreak(20)
   doc.setFontSize(14)
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.text('INSPECTION FINDINGS', margin, yPosition)
-  doc.setFont(undefined, 'normal')
+  doc.setFont('helvetica', 'normal')
   yPosition += 10
 
   // Status Legend
@@ -126,9 +126,9 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
 
     doc.setTextColor(255, 255, 255)
     doc.setFontSize(12)
-    doc.setFont(undefined, 'bold')
+    doc.setFont('helvetica', 'bold')
     doc.text(area.name.toUpperCase(), margin + 3, yPosition + 5.5)
-    doc.setFont(undefined, 'normal')
+    doc.setFont('helvetica', 'normal')
     doc.setTextColor(0, 0, 0)
     yPosition += 12
 
@@ -145,19 +145,19 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
       doc.circle(margin + 3, yPosition - 1.5, 1.5, 'F')
 
       // Item details
-      doc.setFont(undefined, 'bold')
+      doc.setFont('helvetica', 'bold')
       doc.text(`${item.category}:`, margin + 8, yPosition)
-      doc.setFont(undefined, 'normal')
+      doc.setFont('helvetica', 'normal')
 
       const itemText = doc.splitTextToSize(item.point, contentWidth - 40)
       doc.text(itemText, margin + 8 + doc.getTextWidth(`${item.category}: `), yPosition)
 
       // Status text aligned to the right
-      doc.setFont(undefined, 'bold')
+      doc.setFont('helvetica', 'bold')
       doc.setTextColor(...statusColor as [number, number, number])
       doc.text(`[${item.status}]`, pageWidth - margin - 20, yPosition)
       doc.setTextColor(0, 0, 0)
-      doc.setFont(undefined, 'normal')
+      doc.setFont('helvetica', 'normal')
 
       yPosition += itemText.length * 4 + 2
 
@@ -202,9 +202,9 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   doc.rect(margin, yPosition, contentWidth, 30, 'F')
 
   doc.setFontSize(12)
-  doc.setFont(undefined, 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.text('INSPECTION STATISTICS', margin + 5, yPosition + 8)
-  doc.setFont(undefined, 'normal')
+  doc.setFont('helvetica', 'normal')
 
   // Calculate stats
   let passCount = 0, failCount = 0, naCount = 0
@@ -233,13 +233,13 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
 
   if (totalItems > 0) {
     const passRate = Math.round((passCount / totalItems) * 100)
-    doc.setFont(undefined, 'bold')
+    doc.setFont('helvetica', 'bold')
     doc.text(`Pass Rate: ${passRate}%`, margin + 5, yPosition + 25)
-    doc.setFont(undefined, 'normal')
+    doc.setFont('helvetica', 'normal')
   }
 
   // Add footers to all pages
-  const pageCount = doc.internal.getNumberOfPages()
+  const pageCount = (doc as any).internal.pages.length - 1
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
 

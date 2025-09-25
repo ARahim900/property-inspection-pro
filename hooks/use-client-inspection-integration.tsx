@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useClients } from "./use-clients"
 import { useInspections } from "./use-inspections"
-import type { Client, InspectionData } from "@/types"
+import type { Client, InspectionData, Property } from "@/types"
 
 export function useClientInspectionIntegration() {
   const { clients, saveClient, refreshClients } = useClients()
@@ -294,10 +294,10 @@ export function useClientInspectionIntegration() {
 
     if (!existingProperty) {
       // Add new property to client
-      const newProperty = {
+      const newProperty: Property = {
         id: `prop_${Date.now()}`,
         location: inspection.propertyLocation,
-        type: inspection.propertyType === 'Apartment' || inspection.propertyType === 'Villa' ? 'Residential' : 'Commercial',
+        type: (inspection.propertyType === 'Apartment' || inspection.propertyType === 'Villa' ? 'Residential' : 'Commercial') as 'Residential' | 'Commercial',
         size: 0
       }
 

@@ -518,7 +518,7 @@ This report was formed as per the client request as a supportive opinion to enab
                        passRate >= 60 ? [251, 191, 36] : [239, 68, 68]
   doc.setFillColor(...lightGray)
   doc.roundedRect(margin + cardWidth + cardSpacing, currentY, cardWidth, cardHeight, 3, 3, 'F')
-  doc.setDrawColor(...passRateColor)
+  doc.setDrawColor(passRateColor[0], passRateColor[1], passRateColor[2])
   doc.setLineWidth(1)
   doc.roundedRect(margin + cardWidth + cardSpacing, currentY, cardWidth, cardHeight, 3, 3, 'S')
   doc.setFontSize(9)
@@ -527,7 +527,7 @@ This report was formed as per the client request as a supportive opinion to enab
   doc.text('Pass Rate', margin + cardWidth + cardSpacing + cardWidth/2, currentY + 8, { align: 'center' })
   doc.text('نسبة النجاح', margin + cardWidth + cardSpacing + cardWidth/2, currentY + 13, { align: 'center' })
   doc.setFontSize(18)
-  doc.setTextColor(...passRateColor)
+  doc.setTextColor(passRateColor[0], passRateColor[1], passRateColor[2])
   doc.text(`${passRate}%`, margin + cardWidth + cardSpacing + cardWidth/2, currentY + 25, { align: 'center' })
 
   // Photos Card
@@ -576,7 +576,7 @@ This report was formed as per the client request as a supportive opinion to enab
   // SIGNATURES PAGE
   if (currentY > pageHeight - 100) {
     doc.addPage()
-    addProfessionalHeader(doc.internal.getNumberOfPages())
+    addProfessionalHeader((doc as any).internal.pages.length - 1)
     currentY = 45
   }
 
@@ -636,7 +636,7 @@ This report was formed as per the client request as a supportive opinion to enab
   doc.text('مرفق تقرير الفحص العقاري', pageWidth / 2, currentY + 16, { align: 'center' })
 
   // Add footers to all pages
-  const pageCount = doc.internal.getNumberOfPages()
+  const pageCount = (doc as any).internal.pages.length - 1
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
     addProfessionalFooter(i, pageCount)
