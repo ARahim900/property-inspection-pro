@@ -25,8 +25,11 @@ import { EnhancedInspectionForm } from "./components/enhanced-inspection-form"
 const useInvoices = () => {
   const getInvoices = (): Invoice[] => {
     try {
-      const invoices = JSON.parse(localStorage.getItem("invoices") || "[]") as Invoice[]
-      return invoices.sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime())
+      if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+        const invoices = JSON.parse(localStorage.getItem("invoices") || "[]") as Invoice[]
+        return invoices.sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime())
+      }
+      return []
     } catch (error) {
       console.error("Error parsing invoices from localStorage", error)
       return []
@@ -38,14 +41,18 @@ const useInvoices = () => {
   }
 
   const saveInvoice = (invoiceData: Invoice): void => {
-    const invoices = getInvoices().filter((inv) => inv.id !== invoiceData.id)
-    invoices.push(invoiceData)
-    localStorage.setItem("invoices", JSON.stringify(invoices))
+    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+      const invoices = getInvoices().filter((inv) => inv.id !== invoiceData.id)
+      invoices.push(invoiceData)
+      localStorage.setItem("invoices", JSON.stringify(invoices))
+    }
   }
 
   const deleteInvoice = (id: string): void => {
-    const invoices = getInvoices().filter((inv) => inv.id !== id)
-    localStorage.setItem("invoices", JSON.stringify(invoices))
+    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+      const invoices = getInvoices().filter((inv) => inv.id !== id)
+      localStorage.setItem("invoices", JSON.stringify(invoices))
+    }
   }
 
   return { getInvoices, getInvoiceById, saveInvoice, deleteInvoice }
@@ -55,7 +62,7 @@ const useAppSettings = () => {
   const defaultAvatar = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#cbd5e1"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>')}`
 
   const defaultSettings: AppSettings = {
-    theme: (localStorage.getItem("theme") as "light" | "dark") || "dark",
+    theme: "dark", // Default to dark, will be updated on client
     notifications: { email: true, push: false },
     language: "en",
     profile: {
@@ -68,18 +75,20 @@ const useAppSettings = () => {
 
   const getSettings = (): AppSettings => {
     try {
-      const stored = localStorage.getItem("appSettings")
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        // Deep merge with defaults to handle new settings being added
-        return {
-          ...defaultSettings,
-          ...parsed,
-          notifications: { ...defaultSettings.notifications, ...parsed.notifications },
-          profile: { ...defaultSettings.profile, ...parsed.profile },
+      if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+        const stored = localStorage.getItem("appSettings")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          // Deep merge with defaults to handle new settings being added
+          return {
+            ...defaultSettings,
+            ...parsed,
+            notifications: { ...defaultSettings.notifications, ...parsed.notifications },
+            profile: { ...defaultSettings.profile, ...parsed.profile },
+          }
         }
+        localStorage.setItem("appSettings", JSON.stringify(defaultSettings))
       }
-      localStorage.setItem("appSettings", JSON.stringify(defaultSettings))
       return defaultSettings
     } catch (e) {
       console.error("Failed to parse app settings:", e)
@@ -88,8 +97,10 @@ const useAppSettings = () => {
   }
 
   const saveSettings = (settings: AppSettings) => {
-    localStorage.setItem("appSettings", JSON.stringify(settings))
-    localStorage.setItem("theme", settings.theme) // Also save theme separately for initial load
+    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+      localStorage.setItem("appSettings", JSON.stringify(settings))
+      localStorage.setItem("theme", settings.theme) // Also save theme separately for initial load
+    }
   }
 
   return { getSettings, saveSettings }
@@ -1643,10 +1654,22 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>(getSettings())
   const [currentView, setCurrentView] = useState<string>("dashboard")
   const [currentInspectionId, setCurrentInspectionId] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
   const { user, loading } = useAuth()
   // Lazy import to avoid ssr import issues in non-next environments
   // Default to false to avoid premature redirects before config check completes
   const [supabaseConfigured, setSupabaseConfigured] = useState<boolean>(false)
+
+  useEffect(() => {
+    setMounted(true)
+    // Load theme from localStorage after mounting
+    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+      const storedSettings = getSettings()
+      setSettings(storedSettings)
+      document.documentElement.className = storedSettings.theme
+    }
+  }, [])
+
   useEffect(() => {
     // Dynamically check configuration at runtime
     import("@/lib/supabase/client").then(m => {
@@ -1662,8 +1685,10 @@ const App: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    document.documentElement.className = settings.theme
-  }, [settings.theme])
+    if (mounted) {
+      document.documentElement.className = settings.theme
+    }
+  }, [settings.theme, mounted])
 
   // In environments without Supabase configuration, skip auth gating and open the form directly for QA.
   useEffect(() => {
@@ -1784,7 +1809,7 @@ const App: React.FC = () => {
                 className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
                 aria-label="Toggle theme"
               >
-                {settings.theme === "dark" ? "🌞" : "🌙"}
+                {mounted ? (settings.theme === "dark" ? "🌞" : "🌙") : "🌙"}
               </button>
               <div className="flex items-center gap-2">
                 <img

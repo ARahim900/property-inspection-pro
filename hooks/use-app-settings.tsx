@@ -57,12 +57,14 @@ export function useAppSettings() {
 
       // Try to get additional settings from localStorage as fallback
       try {
-        const stored = localStorage.getItem("appSettings")
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          userSettings.theme = parsed.theme || userSettings.theme
-          userSettings.notifications = { ...userSettings.notifications, ...parsed.notifications }
-          userSettings.language = parsed.language || userSettings.language
+        if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+          const stored = localStorage.getItem("appSettings")
+          if (stored) {
+            const parsed = JSON.parse(stored)
+            userSettings.theme = parsed.theme || userSettings.theme
+            userSettings.notifications = { ...userSettings.notifications, ...parsed.notifications }
+            userSettings.language = parsed.language || userSettings.language
+          }
         }
       } catch (e) {
         console.error("Failed to parse stored settings:", e)
@@ -81,8 +83,10 @@ export function useAppSettings() {
   const saveSettings = async (newSettings: AppSettings) => {
     if (!user) {
       // Save to localStorage only if not authenticated
-      localStorage.setItem("appSettings", JSON.stringify(newSettings))
-      localStorage.setItem("theme", newSettings.theme)
+      if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+        localStorage.setItem("appSettings", JSON.stringify(newSettings))
+        localStorage.setItem("theme", newSettings.theme)
+      }
       setSettings(newSettings)
       return
     }
@@ -101,8 +105,10 @@ export function useAppSettings() {
       if (profileError) throw profileError
 
       // Save other settings to localStorage
-      localStorage.setItem("appSettings", JSON.stringify(newSettings))
-      localStorage.setItem("theme", newSettings.theme)
+      if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+        localStorage.setItem("appSettings", JSON.stringify(newSettings))
+        localStorage.setItem("theme", newSettings.theme)
+      }
 
       setSettings(newSettings)
     } catch (error) {
