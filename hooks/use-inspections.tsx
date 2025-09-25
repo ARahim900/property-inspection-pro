@@ -266,29 +266,259 @@ export function useInspections() {
     }
   }
 
-  // Helper function to update inspection areas and items
-  const updateInspectionAreas = async (inspectionId: string, areas: any[], userId: string) => {
-    // First, delete existing areas and their related data
-    await supabase
-      .from("inspection_photos")
-      .delete()
-      .eq("inspection_id", inspectionId)
-      .eq("user_id", userId)
+  // Helper function to update inspection areas and items efficiently
+  const updateInspectionAreas = async (inspectionId: string, newAreas: any[], userId: string) => {
+    try {
+      // First, get existing areas and items to compare
+      const { data: existingAreas, error: fetchError } = await supabase
+        .from("inspection_areas")
+        .select(`
+          *,
+          inspection_items (
+            *,
+            inspection_photos (*)
+          )
+        `)
+        .eq("inspection_id", inspectionId)
+        .eq("user_id", userId)
 
-    await supabase
-      .from("inspection_items")
-      .delete()
-      .eq("inspection_id", inspectionId)
-      .eq("user_id", userId)
+      if (fetchError) throw fetchError
 
-    await supabase
-      .from("inspection_areas")
-      .delete()
-      .eq("inspection_id", inspectionId)
-      .eq("user_id", userId)
+      // Create maps for efficient lookup
+      const existingAreasMap = new Map(existingAreas?.map(area => [area.id, area]) || [])
+      const newAreasMap = new Map(newAreas.map(area => [area.id, area]))
 
-    // Then save the updated areas
-    await saveInspectionAreas(inspectionId, areas, userId)
+      // Track which areas/items/photos to delete
+      const areasToDelete = existingAreas?.filter(area => !newAreasMap.has(area.id)) || []
+      const areasToUpdate = newAreas.filter(area => existingAreasMap.has(area.id))
+      const areasToCreate = newAreas.filter(area => !existingAreasMap.has(area.id))
+
+      // Delete removed areas and their related data
+      for (const area of areasToDelete) {
+        // Delete photos first
+        await supabase
+          .from("inspection_photos")
+          .delete()
+          .eq("area_id", area.id)
+          .eq("user_id", userId)
+
+        // Delete items
+        await supabase
+          .from("inspection_items")
+          .delete()
+          .eq("area_id", area.id)
+          .eq("user_id", userId)
+
+        // Delete area
+        await supabase
+          .from("inspection_areas")
+          .delete()
+          .eq("id", area.id)
+          .eq("user_id", userId)
+      }
+
+      // Update existing areas
+      for (const area of areasToUpdate) {
+        const existingArea = existingAreasMap.get(area.id)!
+
+        // Update area name if changed
+        if (existingArea.name !== area.name) {
+          await supabase
+            .from("inspection_areas")
+            .update({ name: area.name })
+            .eq("id", area.id)
+            .eq("user_id", userId)
+        }
+
+        // Update items for this area
+        await updateInspectionItems(inspectionId, area.id, area.items, existingArea.inspection_items || [], userId)
+      }
+
+      // Create new areas
+      for (const area of areasToCreate) {
+        await saveInspectionAreas(inspectionId, [area], userId)
+      }
+
+    } catch (error) {
+      console.error("Error updating inspection areas:", error)
+      throw error
+    }
+  }
+
+  // Helper function to update inspection items efficiently
+  const updateInspectionItems = async (inspectionId: string, areaId: any, newItems: any[], existingItems: any[], userId: string) => {
+    const existingItemsMap = new Map(existingItems.map(item => [item.id, item]))
+    const newItemsMap = new Map(newItems.map(item => [item.id, item]))
+
+    const itemsToDelete = existingItems.filter(item => !newItemsMap.has(item.id))
+    const itemsToUpdate = newItems.filter(item => existingItemsMap.has(item.id))
+    const itemsToCreate = newItems.filter(item => !existingItemsMap.has(item.id))
+
+    // Delete removed items and their photos
+    for (const item of itemsToDelete) {
+      await supabase
+        .from("inspection_photos")
+        .delete()
+        .eq("item_id", item.id)
+        .eq("user_id", userId)
+
+      await supabase
+        .from("inspection_items")
+        .delete()
+        .eq("id", item.id)
+        .eq("user_id", userId)
+    }
+
+    // Update existing items
+    for (const item of itemsToUpdate) {
+      const existingItem = existingItemsMap.get(item.id)!
+
+      // Check if any fields changed
+      const hasChanges = existingItem.category !== item.category ||
+                        existingItem.point !== item.point ||
+                        existingItem.status !== item.status ||
+                        existingItem.comments !== item.comments ||
+                        existingItem.location !== item.location
+
+      if (hasChanges) {
+        await supabase
+          .from("inspection_items")
+          .update({
+            category: item.category,
+            point: item.point,
+            status: item.status,
+            comments: item.comments,
+            location: item.location
+          })
+          .eq("id", item.id)
+          .eq("user_id", userId)
+      }
+
+      // Update photos for this item
+      await updateInspectionPhotos(inspectionId, areaId, item.id, item.photos || [], existingItem.inspection_photos || [], userId)
+    }
+
+    // Create new items
+    for (const item of itemsToCreate) {
+      await saveInspectionItems(inspectionId, areaId, [item], userId)
+    }
+  }
+
+  // Helper function to update inspection photos efficiently
+  const updateInspectionPhotos = async (inspectionId: string, areaId: any, itemId: number, newPhotos: any[], existingPhotos: any[], userId: string) => {
+    const existingPhotosMap = new Map(existingPhotos.map(photo => [photo.name, photo]))
+    const newPhotosMap = new Map(newPhotos.map(photo => [photo.name, photo]))
+
+    const photosToDelete = existingPhotos.filter(photo => !newPhotosMap.has(photo.name))
+    const photosToCreate = newPhotos.filter(photo => !existingPhotosMap.has(photo.name))
+
+    // Delete removed photos
+    for (const photo of photosToDelete) {
+      await supabase
+        .from("inspection_photos")
+        .delete()
+        .eq("id", photo.id)
+        .eq("user_id", userId)
+    }
+
+    // Create new photos
+    for (const photo of photosToCreate) {
+      await saveInspectionPhotos(inspectionId, areaId, itemId, [photo], userId)
+    }
+  }
+
+  // Helper function to save inspection items (extracted from saveInspectionAreas)
+  const saveInspectionItems = async (inspectionId: string, areaId: any, items: any[], userId: string) => {
+    for (const item of items) {
+      const { data: itemData, error: itemError } = await supabase
+        .from("inspection_items")
+        .insert({
+          user_id: userId,
+          inspection_id: inspectionId,
+          area_id: areaId,
+          category: item.category,
+          point: item.point,
+          status: item.status,
+          comments: item.comments,
+          location: item.location
+        })
+        .select()
+        .single()
+
+      if (itemError) throw itemError
+
+      // Save photos for this item
+      if (item.photos && item.photos.length > 0) {
+        await saveInspectionPhotos(inspectionId, areaId, itemData.id, item.photos, userId)
+      }
+    }
+  }
+
+  // Helper function to save inspection photos (extracted from saveInspectionAreas)
+  const saveInspectionPhotos = async (inspectionId: string, areaId: any, itemId: number, photos: any[], userId: string) => {
+    for (const photo of photos) {
+      try {
+        // First, try to upload to storage if base64 data is available
+        let storageUrl = null
+
+        if (photo.base64) {
+          try {
+            // Convert base64 to blob
+            const base64Data = photo.base64.replace(/^data:image\/\w+;base64,/, '')
+            const byteCharacters = atob(base64Data)
+            const byteNumbers = new Array(byteCharacters.length)
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i)
+            }
+            const byteArray = new Uint8Array(byteNumbers)
+            const blob = new Blob([byteArray], { type: 'image/jpeg' })
+
+            // Upload to storage
+            const fileName = `${userId}/${Date.now()}_${photo.name}`
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('inspection-photos')
+              .upload(fileName, blob, {
+                cacheControl: '3600',
+                upsert: false
+              })
+
+            if (uploadError) {
+              console.warn(`Storage upload failed for ${photo.name}:`, uploadError)
+            } else if (uploadData) {
+              const { data: urlData } = supabase.storage
+                .from('inspection-photos')
+                .getPublicUrl(fileName)
+              storageUrl = urlData.publicUrl
+              console.log(`Photo uploaded to storage: ${storageUrl}`)
+            }
+          } catch (uploadError) {
+            console.warn(`Failed to upload photo ${photo.name} to storage:`, uploadError)
+          }
+        }
+
+        // Save photo record in database - always save base64 as fallback
+        const { error: photoError } = await supabase
+          .from("inspection_photos")
+          .insert({
+            user_id: userId,
+            inspection_id: inspectionId,
+            area_id: areaId,
+            item_id: itemId,
+            name: photo.name,
+            storage_url: storageUrl,
+            base64_data: photo.base64 // Always save base64 data
+          })
+
+        if (photoError) {
+          console.error(`Error saving photo record for ${photo.name}:`, photoError)
+        } else {
+          console.log(`Photo record saved for ${photo.name} with base64 data`)
+        }
+      } catch (error) {
+        console.error(`Error processing photo ${photo.name}:`, error)
+        // Continue with other photos even if one fails
+      }
+    }
   }
 
   // Delete inspection

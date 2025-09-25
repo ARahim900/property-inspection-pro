@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -56,43 +56,239 @@ export function EnhancedInspectionForm({
   const [notFound, setNotFound] = useState(false)
   const [alertMessage, setAlertMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null)
   const [showClientSection, setShowClientSection] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({})
+  const [isAddingPhoto, setIsAddingPhoto] = useState<{ [key: string]: boolean }>({})
 
-  // Load inspection data
+  // ----- Area & Item Editing Helpers -----
+  const updateInspectionField = (updater: (prev: InspectionData) => InspectionData) => {
+    setInspectionData((prev) => (prev ? updater(prev) : prev))
+  }
+
+  // Create collision-resistant numeric IDs to avoid duplicates during rapid interactions
+  const uniqueId = () => Number(`${Date.now()}${Math.floor(Math.random() * 1000)}`)
+
+  // Focus management for accessibility after inserting rows
+  const lastInsertedAreaIdRef = useRef<number | null>(null)
+  const lastInsertedItemRef = useRef<{ areaId: number; itemId: number } | null>(null)
+
   useEffect(() => {
-    if (inspectionId) {
-      if (!loading) {
-        const foundInspection = getInspectionById(inspectionId)
-        if (foundInspection) {
-          setInspectionData(foundInspection)
-          setNotFound(false)
-          
-          // Auto-suggest client based on inspection data
-          const suggestedClient = suggestClient(foundInspection)
-          if (suggestedClient) {
-            handleClientSelect(suggestedClient)
-          }
-        } else {
-          console.error(`Inspection with ID ${inspectionId} not found`)
-          setNotFound(true)
+    // Focus the newly added area name input
+    if (lastInsertedAreaIdRef.current != null) {
+      const el = document.querySelector<HTMLInputElement>(`input[data-area-id="${lastInsertedAreaIdRef.current}"]`)
+      if (el) {
+        el.focus()
+        el.scrollIntoView({ behavior: "smooth", block: "center" })
+      }
+      lastInsertedAreaIdRef.current = null
+    }
+    // Focus the newly added item point input
+    if (lastInsertedItemRef.current) {
+      const { itemId } = lastInsertedItemRef.current
+      const el = document.querySelector<HTMLInputElement>(`input[data-item-id="${itemId}"]`)
+      if (el) {
+        el.focus()
+        el.scrollIntoView({ behavior: "smooth", block: "center" })
+      }
+      lastInsertedItemRef.current = null
+    }
+  }, [inspectionData])
+
+  const handleAddArea = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    e?.preventDefault()
+    if (!inspectionData) return
+    const id = uniqueId()
+    const newArea: InspectionArea = { id, name: `New Area ${inspectionData.areas.length + 1}`, items: [] }
+    updateInspectionField(prev => ({ ...prev, areas: [...prev.areas, newArea] }))
+    lastInsertedAreaIdRef.current = id
+  }
+
+  const handleUpdateArea = (updatedArea: InspectionArea) => {
+    if (!inspectionData) return
+    updateInspectionField(prev => ({
+      ...prev,
+      areas: prev.areas.map(a => a.id === updatedArea.id ? updatedArea : a)
+    }))
+  }
+
+  const handleRemoveArea = (areaId: number) => {
+    if (!inspectionData) return
+    updateInspectionField(prev => ({ ...prev, areas: prev.areas.filter(a => a.id !== areaId) }))
+  }
+
+  const handleAddItem = (area: InspectionArea, e?: React.MouseEvent | React.KeyboardEvent) => {
+    e?.preventDefault()
+    const id = uniqueId()
+    const newItem = {
+      id,
+      category: "Custom",
+      point: "New Point",
+      status: 'N/A' as const,
+      comments: "",
+      location: "",
+      photos: [] as { base64: string; name: string }[],
+    }
+    handleUpdateArea({ ...area, items: [...area.items, newItem] })
+    lastInsertedItemRef.current = { areaId: area.id, itemId: id }
+  }
+
+  const handleUpdateItem = (area: InspectionArea, itemId: number, updates: Partial<InspectionArea['items'][number]>) => {
+    const updatedItems = area.items.map(it => it.id === itemId ? { ...it, ...updates } : it)
+    handleUpdateArea({ ...area, items: updatedItems })
+  }
+
+  const handleRemoveItem = (area: InspectionArea, itemId: number) => {
+    handleUpdateArea({ ...area, items: area.items.filter(it => it.id !== itemId) })
+  }
+
+  // Validation function
+  const validateForm = (): boolean => {
+    const errors: { [key: string]: string } = {}
+
+    if (!inspectionData) {
+      errors.general = 'Inspection data is missing'
+      return false
+    }
+
+    if (!inspectionData.clientName.trim()) {
+      errors.clientName = 'Client name is required'
+    }
+
+    if (!inspectionData.propertyLocation.trim()) {
+      errors.propertyLocation = 'Property location is required'
+    }
+
+    if (!inspectionData.inspectorName.trim()) {
+      errors.inspectorName = 'Inspector name is required'
+    }
+
+    if (!inspectionData.inspectionDate) {
+      errors.inspectionDate = 'Inspection date is required'
+    }
+
+    if (!inspectionData.propertyType) {
+      errors.propertyType = 'Property type is required'
+    }
+
+    // Validate areas and items
+    if (inspectionData.areas.length === 0) {
+      errors.areas = 'At least one inspection area is required'
+    } else {
+      inspectionData.areas.forEach((area, areaIndex) => {
+        if (!area.name.trim()) {
+          errors[`area_${areaIndex}_name`] = 'Area name is required'
         }
+
+        area.items.forEach((item, itemIndex) => {
+          if (!item.point.trim()) {
+            errors[`area_${areaIndex}_item_${itemIndex}_point`] = 'Inspection point is required'
+          }
+        })
+      })
+    }
+
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const handleAddPhoto = async (area: InspectionArea, itemId: number, file: File) => {
+    const itemKey = `${area.id}_${itemId}`
+
+    try {
+      setIsAddingPhoto(prev => ({ ...prev, [itemKey]: true }))
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setAlertMessage({ type: 'error', message: 'Please select a valid image file' })
+        return
+      }
+
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setAlertMessage({ type: 'error', message: 'Image file size must be less than 10MB' })
+        return
+      }
+
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result))
+        reader.onerror = () => reject(new Error('Failed to read file'))
+        reader.readAsDataURL(file)
+      })
+
+      const item = area.items.find(i => i.id === itemId)
+      if (!item) {
+        setAlertMessage({ type: 'error', message: 'Item not found' })
+        return
+      }
+
+      const nextPhotos = [...(item.photos || []), { base64, name: file.name }]
+      handleUpdateItem(area, itemId, { photos: nextPhotos })
+
+      setAlertMessage({ type: 'success', message: `Photo "${file.name}" added successfully` })
+    } catch (e) {
+      console.error('Failed to add photo', e)
+      setAlertMessage({ type: 'error', message: 'Failed to add photo. Please try again.' })
+    } finally {
+      setIsAddingPhoto(prev => ({ ...prev, [itemKey]: false }))
+    }
+  }
+
+  const handleRemovePhoto = (area: InspectionArea, itemId: number, index: number) => {
+    const item = area.items.find(i => i.id === itemId)
+    if (!item) return
+    const nextPhotos = (item.photos || []).filter((_, i) => i !== index)
+    handleUpdateItem(area, itemId, { photos: nextPhotos })
+  }
+
+  // Load inspection data (split into two effects to avoid render loops tied to changing function identities)
+
+  // 1) Initialize a new inspection only once when creating
+  useEffect(() => {
+    if (!inspectionId) {
+      setInspectionData(prev => {
+        if (prev) return prev
+        const today = new Date()
+        const localTodayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
+
+        const newInspection: InspectionData = {
+          id: `insp_${Date.now()}`,
+          clientName: "",
+          propertyLocation: "",
+          propertyType: "Apartment",
+          inspectorName: "",
+          inspectionDate: localTodayString,
+          areas: [{ id: Date.now(), name: "General", items: [] }],
+        }
+
+        return newInspection
+      })
+    }
+    // Intentionally only depend on inspectionId to run once per create/edit mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inspectionId])
+
+  // 2) Load an existing inspection after data finished loading
+  useEffect(() => {
+    if (!inspectionId) return
+    if (loading) return
+
+    const foundInspection = getInspectionById(inspectionId)
+    if (foundInspection) {
+      setInspectionData(foundInspection)
+      setNotFound(false)
+
+      // Auto-suggest client based on inspection data
+      const suggestedClient = suggestClient(foundInspection)
+      if (suggestedClient) {
+        handleClientSelect(suggestedClient)
       }
     } else {
-      const today = new Date()
-      const localTodayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
-
-      const newInspection: InspectionData = {
-        id: `insp_${Date.now()}`,
-        clientName: "",
-        propertyLocation: "",
-        propertyType: "Apartment",
-        inspectorName: "",
-        inspectionDate: localTodayString,
-        areas: [{ id: Date.now(), name: "General", items: [] }],
-      }
-      
-      setInspectionData(newInspection)
+      console.error(`Inspection with ID ${inspectionId} not found`)
+      setNotFound(true)
     }
-  }, [inspectionId, loading, inspections, getInspectionById, setInspectionData, suggestClient, handleClientSelect])
+    // Avoid depending on function identities which can cause infinite loops with Radix compose-refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inspectionId, loading])
 
   // Enhanced handle field updates with real-time client suggestions
   const handleUpdateField = (field: keyof InspectionData, value: any) => {
@@ -133,39 +329,66 @@ export function EnhancedInspectionForm({
     e.preventDefault()
     if (!inspectionData || isSaving) return
 
-    setIsSaving(true)
+    // Clear previous validation errors
+    setValidationErrors({})
     setAlertMessage(null)
+
+    // Validate form
+    if (!validateForm()) {
+      setAlertMessage({ type: 'error', message: 'Please fix the validation errors before saving' })
+      return
+    }
+
+    setIsSaving(true)
 
     try {
       let inspectionToSave = inspectionData
 
       // If a client is selected, sync the data
       if (selectedClient) {
-        inspectionToSave = await syncClientInspectionData(inspectionData, selectedClient)
+        try {
+          inspectionToSave = await syncClientInspectionData(inspectionData, selectedClient)
+        } catch (syncError) {
+          console.warn("Client sync failed, continuing with original data:", syncError)
+          // Continue with original data if sync fails
+        }
       }
 
       const savedId = await saveInspection(inspectionToSave)
-      
+
       if (savedId) {
         console.log("Inspection saved successfully with ID:", savedId)
-        setAlertMessage({ type: 'success', message: 'Inspection saved successfully!' })
-        
+        setAlertMessage({
+          type: 'success',
+          message: inspectionId
+            ? 'Inspection updated successfully!'
+            : 'Inspection created successfully!'
+        })
+
         // Delay the onSave callback to show success message
         setTimeout(() => {
           onSave()
-        }, 1500)
+        }, 2000)
       }
     } catch (error: any) {
       console.error("Error saving inspection:", error)
-      
-      if (!error?.message?.includes("duplicate key") && !error?.message?.includes("already exists")) {
-        const errorMessage = error?.message || "Failed to save inspection. Please try again."
-        setAlertMessage({ type: 'error', message: errorMessage })
-      } else {
-        console.log("Inspection saved (duplicate key warning ignored)")
-        setAlertMessage({ type: 'success', message: 'Inspection saved successfully!' })
-        setTimeout(() => onSave(), 1500)
+
+      // Provide more specific error messages
+      let errorMessage = "Failed to save inspection. Please try again."
+
+      if (error?.message?.includes('relation "inspections" does not exist')) {
+        errorMessage = "Database tables not set up. Please follow the setup instructions."
+      } else if (error?.message?.includes('permission denied')) {
+        errorMessage = "Permission denied. Please make sure you're logged in."
+      } else if (error?.message?.includes('violates foreign key constraint')) {
+        errorMessage = "Invalid data reference. Please refresh the page and try again."
+      } else if (error?.message?.includes('duplicate key') || error?.message?.includes('already exists')) {
+        errorMessage = "An inspection with this information already exists."
+      } else if (error?.message) {
+        errorMessage = error.message
       }
+
+      setAlertMessage({ type: 'error', message: errorMessage })
     } finally {
       setIsSaving(false)
     }
@@ -242,6 +465,16 @@ export function EnhancedInspectionForm({
           )}
           <AlertDescription className={alertMessage.type === 'error' ? 'text-red-800 dark:text-red-200' : 'text-green-800 dark:text-green-200'}>
             {alertMessage.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* General Validation Errors */}
+      {validationErrors.general && (
+        <Alert className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
+          <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+          <AlertDescription className="text-red-800 dark:text-red-200">
+            {validationErrors.general}
           </AlertDescription>
         </Alert>
       )}
@@ -324,10 +557,22 @@ export function EnhancedInspectionForm({
                     type="text"
                     placeholder="Enter client name"
                     value={inspectionData.clientName}
-                    onChange={(e) => handleUpdateField("clientName", e.target.value)}
+                    onChange={(e) => {
+                      handleUpdateField("clientName", e.target.value)
+                      // Clear validation error when user starts typing
+                      if (validationErrors.clientName) {
+                        setValidationErrors(prev => ({ ...prev, clientName: '' }))
+                      }
+                    }}
                     required
-                    className="mt-1"
+                    className={`mt-1 ${validationErrors.clientName ? 'border-red-500 focus:border-red-500' : ''}`}
                   />
+                  {validationErrors.clientName && (
+                    <p className="text-sm text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {validationErrors.clientName}
+                    </p>
+                  )}
                   {/* Smart suggestions dropdown */}
                   {inspectionData.clientName && !selectedClient && (
                     <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg max-h-40 overflow-y-auto">
@@ -377,10 +622,21 @@ export function EnhancedInspectionForm({
                     type="text"
                     placeholder="Enter property location"
                     value={inspectionData.propertyLocation}
-                    onChange={(e) => handleUpdateField("propertyLocation", e.target.value)}
+                    onChange={(e) => {
+                      handleUpdateField("propertyLocation", e.target.value)
+                      if (validationErrors.propertyLocation) {
+                        setValidationErrors(prev => ({ ...prev, propertyLocation: '' }))
+                      }
+                    }}
                     required
-                    className="mt-1"
+                    className={`mt-1 ${validationErrors.propertyLocation ? 'border-red-500 focus:border-red-500' : ''}`}
                   />
+                  {validationErrors.propertyLocation && (
+                    <p className="text-sm text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {validationErrors.propertyLocation}
+                    </p>
+                  )}
                   {/* Property location suggestions */}
                   {inspectionData.propertyLocation && (
                     <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg max-h-40 overflow-y-auto">
@@ -431,10 +687,21 @@ export function EnhancedInspectionForm({
                   type="text"
                   placeholder="Enter inspector name"
                   value={inspectionData.inspectorName}
-                  onChange={(e) => handleUpdateField("inspectorName", e.target.value)}
+                  onChange={(e) => {
+                    handleUpdateField("inspectorName", e.target.value)
+                    if (validationErrors.inspectorName) {
+                      setValidationErrors(prev => ({ ...prev, inspectorName: '' }))
+                    }
+                  }}
                   required
-                  className="mt-1"
+                  className={`mt-1 ${validationErrors.inspectorName ? 'border-red-500 focus:border-red-500' : ''}`}
                 />
+                {validationErrors.inspectorName && (
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {validationErrors.inspectorName}
+                  </p>
+                )}
               </div>
 
               {/* Inspection Date */}
@@ -447,10 +714,21 @@ export function EnhancedInspectionForm({
                   id="inspection-date"
                   type="date"
                   value={inspectionData.inspectionDate}
-                  onChange={(e) => handleUpdateField("inspectionDate", e.target.value)}
+                  onChange={(e) => {
+                    handleUpdateField("inspectionDate", e.target.value)
+                    if (validationErrors.inspectionDate) {
+                      setValidationErrors(prev => ({ ...prev, inspectionDate: '' }))
+                    }
+                  }}
                   required
-                  className="mt-1"
+                  className={`mt-1 ${validationErrors.inspectionDate ? 'border-red-500 focus:border-red-500' : ''}`}
                 />
+                {validationErrors.inspectionDate && (
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {validationErrors.inspectionDate}
+                  </p>
+                )}
               </div>
 
               {/* Property Type */}
@@ -461,9 +739,14 @@ export function EnhancedInspectionForm({
                 </Label>
                 <Select
                   value={inspectionData.propertyType}
-                  onValueChange={(value) => handleUpdateField("propertyType", value)}
+                  onValueChange={(value) => {
+                    handleUpdateField("propertyType", value)
+                    if (validationErrors.propertyType) {
+                      setValidationErrors(prev => ({ ...prev, propertyType: '' }))
+                    }
+                  }}
                 >
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger className={`mt-1 ${validationErrors.propertyType ? 'border-red-500 focus:border-red-500' : ''}`}>
                     <SelectValue placeholder="Select property type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -473,6 +756,12 @@ export function EnhancedInspectionForm({
                     <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>
+                {validationErrors.propertyType && (
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {validationErrors.propertyType}
+                  </p>
+                )}
                 {selectedClient && selectedClient.properties.length > 0 && (
                   <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
                     <CheckCircle className="w-3 h-3" />
@@ -499,6 +788,273 @@ export function EnhancedInspectionForm({
           </CardContent>
         </Card>
 
+        {/* Areas & Items Editor */}
+        <div className="space-y-6">
+          {inspectionData.areas.map((area, areaIndex) => (
+            <Card key={area.id} className="relative">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center justify-between gap-2">
+                  <div className="flex-1 flex items-center gap-2">
+                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">
+                      Area {areaIndex + 1}
+                    </span>
+                    <Input
+                      value={area.name}
+                      onChange={(e) => handleUpdateArea({ ...area, name: e.target.value })}
+                      placeholder="Area name"
+                      className="text-lg font-semibold"
+                      data-area-id={area.id}
+                      aria-label={`Area ${areaIndex + 1} name`}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={(e) => { e.preventDefault(); handleRemoveArea(area.id) }}
+                    className="flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Remove Area
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Items list */}
+                {area.items.length === 0 && (
+                  <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                    <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    <p className="text-sm">No inspection items yet.</p>
+                    <p className="text-xs mt-1">Click "Add Item" to get started.</p>
+                  </div>
+                )}
+                <div className="space-y-4">
+                  {area.items.map((item, itemIndex) => (
+                    <div key={item.id} className="border rounded-lg p-4 space-y-4 bg-slate-50/50 dark:bg-slate-800/50">
+                      {/* Item Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">
+                            Item {itemIndex + 1}
+                          </span>
+                          <Badge variant={item.status === 'Pass' ? 'default' : item.status === 'Fail' ? 'destructive' : 'secondary'}>
+                            {item.status}
+                          </Badge>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => { e.preventDefault(); handleRemoveItem(area, item.id) }}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          Remove Item
+                        </Button>
+                      </div>
+
+                      {/* Item Details Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium">Category</Label>
+                          <Input
+                            value={item.category}
+                            onChange={(e) => handleUpdateItem(area, item.id, { category: e.target.value })}
+                            placeholder="e.g., Electrical, Plumbing, Structure"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Inspection Point</Label>
+                          <Input
+                            value={item.point}
+                            onChange={(e) => handleUpdateItem(area, item.id, { point: e.target.value })}
+                            placeholder="e.g., Check outlet functionality"
+                            data-item-id={item.id}
+                            aria-label={`Item ${itemIndex + 1} inspection point`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Status and Location */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium">Status</Label>
+                          <Select
+                            value={item.status}
+                            onValueChange={(value) => handleUpdateItem(area, item.id, { status: value as any })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Pass">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                  Pass
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="Fail">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                  Fail
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="N/A">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                                  N/A
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Location</Label>
+                          <Input
+                            value={item.location}
+                            onChange={(e) => handleUpdateItem(area, item.id, { location: e.target.value })}
+                            placeholder="e.g., Master Bedroom, Kitchen, Living Room"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Comments */}
+                      <div>
+                        <Label className="text-sm font-medium">Comments & Notes</Label>
+                        <textarea
+                          value={item.comments}
+                          onChange={(e) => handleUpdateItem(area, item.id, { comments: e.target.value })}
+                          placeholder="Add detailed comments, observations, or recommendations..."
+                          className="w-full min-h-[80px] p-3 border rounded-md bg-white dark:bg-slate-800 text-sm resize-y"
+                          rows={3}
+                        />
+                      </div>
+
+                      {/* Photos Section */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Photos</Label>
+                        {item.photos && item.photos.length > 0 && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            {item.photos.map((photo, idx) => (
+                              <div key={idx} className="relative group">
+                                <div className="aspect-square border rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700">
+                                  <img
+                                    src={photo.base64}
+                                    alt={photo.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center">
+                                    <button
+                                      type="button"
+                                      className="opacity-0 group-hover:opacity-100 bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm hover:bg-red-700 transition-all"
+                                      onClick={() => handleRemovePhoto(area, item.id, idx)}
+                                      title="Remove photo"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                </div>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate" title={photo.name}>
+                                  {photo.name}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            disabled={isAddingPhoto[`${area.id}_${item.id}`]}
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files || [])
+                              files.forEach(file => handleAddPhoto(area, item.id, file))
+                              e.currentTarget.value = ''
+                            }}
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={isAddingPhoto[`${area.id}_${item.id}`]}
+                            onClick={() => {
+                              const input = document.createElement('input')
+                              input.type = 'file'
+                              input.accept = 'image/*'
+                              input.multiple = true
+                              input.onchange = (e) => {
+                                const files = Array.from((e.target as HTMLInputElement).files || [])
+                                files.forEach(file => handleAddPhoto(area, item.id, file))
+                              }
+                              input.click()
+                            }}
+                            className="flex items-center gap-1"
+                          >
+                            {isAddingPhoto[`${area.id}_${item.id}`] ? (
+                              <>
+                                <RefreshCw className="w-4 h-4 animate-spin" />
+                                Adding...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                                Add Photos
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={(e) => handleAddItem(area, e)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') handleAddItem(area, e)
+                    }}
+                    className="flex items-center gap-2"
+                    aria-label={`Add item to Area ${areaIndex + 1}`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Item
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          <div className="flex justify-center pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={(e) => handleAddArea(e)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') handleAddArea(e)
+              }}
+              className="flex items-center gap-2"
+              aria-label="Add another area"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Add Another Area
+            </Button>
+          </div>
+        </div>
+
         {/* Form Actions */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
@@ -513,13 +1069,18 @@ export function EnhancedInspectionForm({
                 {inspectionData.areas.length} {inspectionData.areas.length === 1 ? 'Area' : 'Areas'}
               </Badge>
             )}
+            {inspectionData.areas.some(area => area.items.length > 0) && (
+              <Badge variant="outline">
+                {inspectionData.areas.reduce((total, area) => total + area.items.length, 0)} Items
+              </Badge>
+            )}
           </div>
-          
+
           <div className="flex gap-3">
-            <Button type="button" onClick={onCancel} variant="outline">
+            <Button type="button" onClick={onCancel} variant="outline" disabled={isSaving}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSaving}>
+            <Button type="submit" disabled={isSaving || Object.keys(validationErrors).length > 0}>
               {isSaving ? (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
@@ -528,12 +1089,27 @@ export function EnhancedInspectionForm({
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  Save Inspection
+                  {inspectionId ? 'Update Inspection' : 'Save Inspection'}
                 </>
               )}
             </Button>
           </div>
         </div>
+
+        {/* Validation Summary */}
+        {Object.keys(validationErrors).length > 0 && (
+          <Alert className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
+            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <AlertDescription className="text-red-800 dark:text-red-200">
+              <div className="font-medium">Please fix the following errors:</div>
+              <ul className="list-disc list-inside mt-1 space-y-1">
+                {Object.entries(validationErrors).map(([key, message]) => (
+                  <li key={key} className="text-sm">{message}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
       </form>
     </div>
   )

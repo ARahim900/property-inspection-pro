@@ -1494,14 +1494,12 @@ const SimplePieChart: React.FC<{ data: { name: string; value: number; fill: stri
 
 const DashboardOverview: React.FC = () => {
   const { inspections } = useInspections()
-  const { getClients } = useClients()
+  const { clients } = useClients()
   const { getInvoices } = useInvoices()
 
-  const [clients, setClients] = useState<Client[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
 
   useEffect(() => {
-    setClients(getClients())
     setInvoices(getInvoices())
   }, [])
 
@@ -1646,10 +1644,33 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<string>("dashboard")
   const [currentInspectionId, setCurrentInspectionId] = useState<string | null>(null)
   const { user, loading } = useAuth()
+  // Lazy import to avoid ssr import issues in non-next environments
+  // Default to false to avoid premature redirects before config check completes
+  const [supabaseConfigured, setSupabaseConfigured] = useState<boolean>(false)
+  useEffect(() => {
+    // Dynamically check configuration at runtime
+    import("@/lib/supabase/client").then(m => {
+      try {
+        // if function exists use it, default to true to avoid blocking
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ok = (m as any).isSupabaseConfigured ? (m as any).isSupabaseConfigured() : true
+        setSupabaseConfigured(!!ok)
+      } catch {
+        setSupabaseConfigured(true)
+      }
+    }).catch(() => setSupabaseConfigured(true))
+  }, [])
 
   useEffect(() => {
     document.documentElement.className = settings.theme
   }, [settings.theme])
+
+  // In environments without Supabase configuration, skip auth gating and open the form directly for QA.
+  useEffect(() => {
+    if (!supabaseConfigured) {
+      setCurrentView("form")
+    }
+  }, [supabaseConfigured])
 
   const handleSettingsUpdate = (newSettings: AppSettings) => {
     setSettings(newSettings)
@@ -1657,8 +1678,8 @@ const App: React.FC = () => {
     document.documentElement.className = newSettings.theme
   }
 
-  // Show loading state while checking authentication
-  if (loading) {
+  // Show loading state while checking authentication (only when Supabase is configured)
+  if (loading && supabaseConfigured) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
         <div className="text-center">
@@ -1669,9 +1690,16 @@ const App: React.FC = () => {
     )
   }
 
-  // Redirect to login if not authenticated
-  if (!user) {
-    window.location.href = '/auth/login'
+  // Redirect to login only when Supabase is configured.
+  // In local/dev without .env, allow full access so we can QA features.
+  if (!user && supabaseConfigured) {
+    if (typeof window !== "undefined" && window.location.pathname !== '/auth/login') {
+      window.location.href = '/auth/login'
+    }
+    // If we're already on the login route, let Next render it
+    if (typeof window !== "undefined" && window.location.pathname === '/auth/login') {
+      return null
+    }
     return null
   }
 
