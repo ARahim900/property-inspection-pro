@@ -2,6 +2,18 @@
 
 All notable changes to the Property Inspection Pro application will be documented in this file.
 
+## [2025-09-25] - Env Template, Nav CSS Import, Dev Start
+
+### ✨ Added
+- `.env.local.example` template for Supabase configuration (URL and anon key).
+
+### 🔄 Changed
+- Imported `styles/navigation-override.css` in `app/globals.css` to force navigation styling overrides app-wide.
+
+### 🧰 Developer Notes
+- Local dev server verified at `http://localhost:3000`.
+- Configuration banner appears until `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set.
+
 ## [2024-12-19] - Supabase Integration & Inspection Form Fixes
 
 ### 🔧 Fixed
