@@ -1,24 +1,13 @@
 [build]
-  # Build command for Next.js
   command = "npm run build"
-  
-  # Directory to publish (Next.js output directory)
-  publish = ".next"
 
 [build.environment]
-  # Node.js version
   NODE_VERSION = "18"
-  
-  # Next.js specific environment variables
   NEXT_TELEMETRY_DISABLED = "1"
 
-# Redirect rules for Next.js app router
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
-# Headers for security and performance
 [[headers]]
   for = "/*"
   [headers.values]
@@ -26,59 +15,13 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    Content-Security-Policy = "default-src 'self' https://yhratzeatsvajrpydrok.supabase.co https://*.supabase.co; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://yhratzeatsvajrpydrok.supabase.co https://*.supabase.co wss://*.supabase.co"
 
-# Cache static assets
 [[headers]]
   for = "/_next/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Cache images
 [[headers]]
-  for = "*.jpg"
+  for = "/images/*"
   [headers.values]
-    Cache-Control = "public, max-age=31536000"
-
-[[headers]]
-  for = "*.jpeg"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000"
-
-[[headers]]
-  for = "*.png"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000"
-
-[[headers]]
-  for = "*.svg"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000"
-
-# Functions configuration (if using Netlify Functions)
-[functions]
-  directory = "netlify/functions"
-
-# Edge functions configuration (if using Netlify Edge Functions)
-[edge_functions]
-  directory = "netlify/edge-functions"
-
-# Plugin configuration
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
-# Form handling (if using Netlify Forms)
-[build.processing]
-  skip_processing = false
-
-# Deploy previews
-[context.deploy-preview]
-  command = "npm run build"
-
-[context.branch-deploy]
-  command = "npm run build"
-
-# Production context
-[context.production]
-  command = "npm run build"
+    Cache-Control = "public, max-age=604800"
