@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { useClients } from "@/hooks/use-clients"
 import { useInspections } from "@/hooks/use-inspections"
+import { useClientInspectionIntegration } from "@/hooks/use-client-inspection-integration"
 import type { Client, Property, InspectionData } from "@/types"
 import { 
   User, 
@@ -41,6 +42,11 @@ export function ClientSection({
 }: ClientSectionProps) {
   const { clients, loading: clientsLoading, saveClient, refreshClients } = useClients()
   const { inspections } = useInspections()
+  const { 
+    findBestMatchingClient, 
+    extractClientInfoFromInspection,
+    updateClientPropertiesFromInspection 
+  } = useClientInspectionIntegration()
   
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -58,35 +64,69 @@ export function ClientSection({
     properties: []
   })
 
-  // Auto-populate client data when inspection data changes
+  // Enhanced auto-populate client data when inspection data changes
   useEffect(() => {
     if (inspectionData?.clientName && clients.length > 0) {
-      const matchingClient = clients.find(client => 
-        client.name.toLowerCase().includes(inspectionData.clientName.toLowerCase())
-      )
+      // Use enhanced matching algorithm
+      const matchingClient = findBestMatchingClient(inspectionData.clientName, clients)
       
       if (matchingClient && matchingClient.id !== selectedClient?.id) {
         setSelectedClient(matchingClient)
         onClientSelect?.(matchingClient)
+        
+        // Show auto-population indicator
+        setAlertMessage({ 
+          type: 'success', 
+          message: `Auto-selected client: ${matchingClient.name}` 
+        })
       }
     }
   }, [inspectionData?.clientName, clients, selectedClient?.id, onClientSelect])
 
-  // Auto-populate new client form with inspection data
+  // Auto-populate client data when property location changes
+  useEffect(() => {
+    if (inspectionData?.propertyLocation && clients.length > 0 && !selectedClient) {
+      // Find client with matching property location
+      const matchingClient = clients.find(client =>
+        client.properties.some(prop =>
+          prop.location.toLowerCase().includes(inspectionData.propertyLocation.toLowerCase()) ||
+          inspectionData.propertyLocation.toLowerCase().includes(prop.location.toLowerCase())
+        )
+      )
+      
+      if (matchingClient) {
+        setSelectedClient(matchingClient)
+        onClientSelect?.(matchingClient)
+        
+        setAlertMessage({ 
+          type: 'success', 
+          message: `Auto-selected client based on property location: ${matchingClient.name}` 
+        })
+      }
+    }
+  }, [inspectionData?.propertyLocation, clients, selectedClient, onClientSelect])
+
+  // Enhanced auto-populate new client form with inspection data
   useEffect(() => {
     if (inspectionData && showNewClientForm) {
+      // Extract additional information from inspection data
+      const extractedInfo = extractClientInfoFromInspection(inspectionData)
+      
       setNewClient(prev => ({
         ...prev,
         name: inspectionData.clientName || "",
+        email: extractedInfo.email || "",
+        phone: extractedInfo.phone || "",
+        address: extractedInfo.address || "",
         properties: inspectionData.propertyLocation ? [{
           id: `prop_${Date.now()}`,
           location: inspectionData.propertyLocation,
           type: inspectionData.propertyType === 'Apartment' || inspectionData.propertyType === 'Villa' ? 'Residential' : 'Commercial',
-          size: 0
+          size: extractedInfo.propertySize || 0
         }] : []
       }))
     }
-  }, [inspectionData, showNewClientForm])
+  }, [inspectionData, showNewClientForm, extractClientInfoFromInspection])
 
   // Filter clients based on search term
   const filteredClients = clients.filter(client =>
@@ -141,18 +181,24 @@ export function ClientSection({
     }
   }
 
-  // Handle updating existing client
+  // Enhanced handle updating existing client
   const handleUpdateClient = async () => {
     if (!selectedClient) return
 
     setIsSaving(true)
     try {
-      await saveClient(selectedClient)
+      // Auto-update client properties from inspection data if available
+      let clientToUpdate = selectedClient
+      if (inspectionData) {
+        clientToUpdate = await updateClientPropertiesFromInspection(inspectionData, selectedClient)
+      }
+      
+      await saveClient(clientToUpdate)
       await refreshClients()
       
       setAlertMessage({ type: 'success', message: 'Client updated successfully!' })
       setIsEditing(false)
-      onClientUpdate?.(selectedClient)
+      onClientUpdate?.(clientToUpdate)
       
     } catch (error: any) {
       console.error('Error updating client:', error)
@@ -162,15 +208,18 @@ export function ClientSection({
     }
   }
 
-  // Handle adding new property to client
+  // Enhanced handle adding new property to client
   const handleAddProperty = () => {
     if (!selectedClient) return
 
+    // Smart property creation - pre-fill with inspection data if available
+    const extractedInfo = inspectionData ? extractClientInfoFromInspection(inspectionData) : null
+    
     const newProperty: Property = {
       id: `prop_${Date.now()}`,
-      location: "",
-      type: "Residential",
-      size: 0
+      location: inspectionData?.propertyLocation || "",
+      type: inspectionData?.propertyType === 'Apartment' || inspectionData?.propertyType === 'Villa' ? 'Residential' : 'Commercial',
+      size: extractedInfo?.propertySize || 0
     }
 
     setSelectedClient({
@@ -342,40 +391,76 @@ export function ClientSection({
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="client-name">Client Name *</Label>
+                <Label htmlFor="client-name" className="flex items-center gap-2">
+                  Client Name *
+                  {inspectionData?.clientName && (
+                    <Badge variant="outline" className="text-xs">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Auto-filled
+                    </Badge>
+                  )}
+                </Label>
                 <Input
                   id="client-name"
                   value={newClient.name || ""}
                   onChange={(e) => setNewClient(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Enter client name"
+                  className={inspectionData?.clientName ? "border-green-300 bg-green-50 dark:bg-green-950" : ""}
                 />
               </div>
               <div>
-                <Label htmlFor="client-email">Email</Label>
+                <Label htmlFor="client-email" className="flex items-center gap-2">
+                  Email
+                  {inspectionData?.aiSummary && extractClientInfoFromInspection(inspectionData).email && (
+                    <Badge variant="outline" className="text-xs">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Auto-filled
+                    </Badge>
+                  )}
+                </Label>
                 <Input
                   id="client-email"
                   type="email"
                   value={newClient.email || ""}
                   onChange={(e) => setNewClient(prev => ({ ...prev, email: e.target.value }))}
                   placeholder="client@example.com"
+                  className={inspectionData?.aiSummary && extractClientInfoFromInspection(inspectionData).email ? "border-green-300 bg-green-50 dark:bg-green-950" : ""}
                 />
               </div>
               <div>
-                <Label htmlFor="client-phone">Phone</Label>
+                <Label htmlFor="client-phone" className="flex items-center gap-2">
+                  Phone
+                  {inspectionData?.aiSummary && extractClientInfoFromInspection(inspectionData).phone && (
+                    <Badge variant="outline" className="text-xs">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Auto-filled
+                    </Badge>
+                  )}
+                </Label>
                 <Input
                   id="client-phone"
                   value={newClient.phone || ""}
                   onChange={(e) => setNewClient(prev => ({ ...prev, phone: e.target.value }))}
                   placeholder="+1 (555) 123-4567"
+                  className={inspectionData?.aiSummary && extractClientInfoFromInspection(inspectionData).phone ? "border-green-300 bg-green-50 dark:bg-green-950" : ""}
                 />
               </div>
               <div>
-                <Label htmlFor="client-address">Address</Label>
+                <Label htmlFor="client-address" className="flex items-center gap-2">
+                  Address
+                  {inspectionData?.aiSummary && extractClientInfoFromInspection(inspectionData).address && (
+                    <Badge variant="outline" className="text-xs">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Auto-filled
+                    </Badge>
+                  )}
+                </Label>
                 <Input
                   id="client-address"
                   value={newClient.address || ""}
                   onChange={(e) => setNewClient(prev => ({ ...prev, address: e.target.value }))}
                   placeholder="123 Main St, City, State"
+                  className={inspectionData?.aiSummary && extractClientInfoFromInspection(inspectionData).address ? "border-green-300 bg-green-50 dark:bg-green-950" : ""}
                 />
               </div>
             </div>

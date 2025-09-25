@@ -48,7 +48,8 @@ export function EnhancedInspectionForm({
     handleClientSelect,
     handleInspectionClientNameChange,
     suggestClient,
-    syncClientInspectionData
+    syncClientInspectionData,
+    clients
   } = useClientInspectionIntegration()
 
   const [isSaving, setIsSaving] = useState(false)
@@ -93,7 +94,7 @@ export function EnhancedInspectionForm({
     }
   }, [inspectionId, loading, inspections, getInspectionById, setInspectionData, suggestClient, handleClientSelect])
 
-  // Handle field updates
+  // Enhanced handle field updates with real-time client suggestions
   const handleUpdateField = (field: keyof InspectionData, value: any) => {
     if (inspectionData) {
       const updatedInspection = { ...inspectionData, [field]: value }
@@ -102,6 +103,21 @@ export function EnhancedInspectionForm({
       // Handle client name changes for auto-population
       if (field === 'clientName') {
         handleInspectionClientNameChange(value)
+      }
+      
+      // Handle property location changes for client suggestions
+      if (field === 'propertyLocation') {
+        // Trigger client suggestion based on property location
+        const matchingClient = clients.find(client =>
+          client.properties.some(prop =>
+            prop.location.toLowerCase().includes(value.toLowerCase()) ||
+            value.toLowerCase().includes(prop.location.toLowerCase())
+          )
+        )
+        
+        if (matchingClient && matchingClient.id !== selectedClient?.id) {
+          handleClientSelect(matchingClient)
+        }
       }
     }
   }
@@ -290,21 +306,51 @@ export function EnhancedInspectionForm({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Client Name */}
+              {/* Enhanced Client Name with Smart Suggestions */}
               <div>
                 <Label htmlFor="client-name" className="flex items-center gap-2">
                   <User className="w-4 h-4" />
                   Client Name *
+                  {selectedClient && (
+                    <Badge variant="outline" className="text-xs">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Auto-selected
+                    </Badge>
+                  )}
                 </Label>
-                <Input
-                  id="client-name"
-                  type="text"
-                  placeholder="Enter client name"
-                  value={inspectionData.clientName}
-                  onChange={(e) => handleUpdateField("clientName", e.target.value)}
-                  required
-                  className="mt-1"
-                />
+                <div className="relative">
+                  <Input
+                    id="client-name"
+                    type="text"
+                    placeholder="Enter client name"
+                    value={inspectionData.clientName}
+                    onChange={(e) => handleUpdateField("clientName", e.target.value)}
+                    required
+                    className="mt-1"
+                  />
+                  {/* Smart suggestions dropdown */}
+                  {inspectionData.clientName && !selectedClient && (
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                      {clients
+                        .filter(client => 
+                          client.name.toLowerCase().includes(inspectionData.clientName.toLowerCase())
+                        )
+                        .slice(0, 3)
+                        .map(client => (
+                          <div
+                            key={client.id}
+                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer text-sm"
+                            onClick={() => handleClientSelect(client)}
+                          >
+                            <div className="font-medium">{client.name}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                              {client.properties.length} {client.properties.length === 1 ? 'Property' : 'Properties'}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
                 {selectedClient && (
                   <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
                     <CheckCircle className="w-3 h-3" />
@@ -313,21 +359,59 @@ export function EnhancedInspectionForm({
                 )}
               </div>
 
-              {/* Property Location */}
+              {/* Enhanced Property Location with Smart Suggestions */}
               <div>
                 <Label htmlFor="property-location" className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
                   Property Location *
+                  {selectedClient && selectedClient.properties.length > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Auto-suggested
+                    </Badge>
+                  )}
                 </Label>
-                <Input
-                  id="property-location"
-                  type="text"
-                  placeholder="Enter property location"
-                  value={inspectionData.propertyLocation}
-                  onChange={(e) => handleUpdateField("propertyLocation", e.target.value)}
-                  required
-                  className="mt-1"
-                />
+                <div className="relative">
+                  <Input
+                    id="property-location"
+                    type="text"
+                    placeholder="Enter property location"
+                    value={inspectionData.propertyLocation}
+                    onChange={(e) => handleUpdateField("propertyLocation", e.target.value)}
+                    required
+                    className="mt-1"
+                  />
+                  {/* Property location suggestions */}
+                  {inspectionData.propertyLocation && (
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                      {clients
+                        .flatMap(client => 
+                          client.properties
+                            .filter(prop => 
+                              prop.location.toLowerCase().includes(inspectionData.propertyLocation.toLowerCase())
+                            )
+                            .map(prop => ({ ...prop, clientName: client.name }))
+                        )
+                        .slice(0, 5)
+                        .map((property, index) => (
+                          <div
+                            key={`${property.clientName}-${index}`}
+                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer text-sm"
+                            onClick={() => {
+                              handleUpdateField("propertyLocation", property.location)
+                              const client = clients.find(c => c.name === property.clientName)
+                              if (client) handleClientSelect(client)
+                            }}
+                          >
+                            <div className="font-medium">{property.location}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                              {property.clientName} • {property.type}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
                 {selectedClient && selectedClient.properties.length > 0 && (
                   <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
                     <CheckCircle className="w-3 h-3" />
