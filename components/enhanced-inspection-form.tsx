@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge"
 import { ClientSection } from "./client-section"
 import { useInspections } from "@/hooks/use-inspections"
 import { useClientInspectionIntegration } from "@/hooks/use-client-inspection-integration"
-import type { InspectionData, InspectionArea } from "@/types"
+import { createClient } from "@/lib/supabase/client"
+import type { InspectionData, InspectionArea, Client } from "@/types"
 import { 
   FileText, 
   Calendar, 
@@ -343,6 +344,72 @@ export function EnhancedInspectionForm({
 
     try {
       let inspectionToSave = inspectionData
+
+      // Check if this is a new client (not in existing clients list)
+      const existingClient = clients.find(
+        client => client.name.toLowerCase() === inspectionData.clientName.toLowerCase()
+      )
+
+      // If client doesn't exist and we have a name, create a new client automatically
+      if (!existingClient && inspectionData.clientName.trim()) {
+        try {
+          // Import the saveClient function from useClients hook
+          const { saveClient } = await import('@/hooks/use-clients')
+
+          // Create a new client with basic information
+          const newClient: Client = {
+            id: `client_${Date.now()}`,
+            name: inspectionData.clientName.trim(),
+            email: '', // Will be empty initially
+            phone: '',
+            address: '',
+            properties: inspectionData.propertyLocation ? [{
+              id: `prop_${Date.now()}`,
+              location: inspectionData.propertyLocation,
+              type: inspectionData.propertyType === 'Building' || inspectionData.propertyType === 'Other'
+                ? 'Commercial' as const
+                : 'Residential' as const,
+              size: 0
+            }] : []
+          }
+
+          // Save the new client to the database
+          const supabase = createClient()
+          const { user } = await supabase.auth.getUser()
+
+          if (user?.data?.user) {
+            await supabase.from("clients").insert({
+              id: newClient.id,
+              user_id: user.data.user.id,
+              name: newClient.name,
+              email: newClient.email,
+              phone: newClient.phone,
+              address: newClient.address
+            })
+
+            // If we have a property, save it too
+            if (newClient.properties.length > 0) {
+              await supabase.from("properties").insert({
+                id: newClient.properties[0].id,
+                client_id: newClient.id,
+                user_id: user.data.user.id,
+                location: newClient.properties[0].location,
+                type: newClient.properties[0].type,
+                size: newClient.properties[0].size
+              })
+            }
+
+            console.log("New client created automatically:", newClient.name)
+            setAlertMessage({
+              type: 'success',
+              message: `New client "${newClient.name}" added to your clients list!`
+            })
+          }
+        } catch (clientError) {
+          console.warn("Failed to auto-create client, continuing with inspection save:", clientError)
+          // Don't block inspection save if client creation fails
+        }
+      }
 
       // If a client is selected, sync the data
       if (selectedClient) {
