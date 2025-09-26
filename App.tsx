@@ -1429,7 +1429,7 @@ const StatCard: React.FC<{
 
 // Replaced Recharts with simple HTML/CSS charts
 const SimpleBarChart: React.FC<{ data: { name: string; total: number }[] }> = ({ data }) => {
-  const maxValue = Math.max(...data.map((d) => d.total))
+  const maxValue = Math.max(...data.map((d) => d.total), 1) // Ensure at least 1 to avoid division by zero
 
   return (
     <div className="h-72 flex items-end justify-between gap-2 p-4">
@@ -1441,7 +1441,7 @@ const SimpleBarChart: React.FC<{ data: { name: string; total: number }[] }> = ({
           >
             <div
               className="bg-blue-500 w-full absolute bottom-0 rounded-t-lg transition-all duration-300"
-              style={{ height: `${(item.total / maxValue) * 100}%` }}
+              style={{ height: maxValue > 0 ? `${(item.total / maxValue) * 100}%` : '0%' }}
             />
             <div className="absolute top-2 left-1/2 transform -translate-x-1/2 text-xs font-semibold text-slate-600 dark:text-slate-300">
               {item.total}
@@ -1520,15 +1520,39 @@ const DashboardOverview: React.FC = () => {
   const totalRevenue = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0)
   const pendingInvoices = invoices.filter((inv) => inv.status === "Unpaid").length
 
-  // Chart data
-  const monthlyData = [
-    { name: "Jan", total: 12 },
-    { name: "Feb", total: 19 },
-    { name: "Mar", total: 15 },
-    { name: "Apr", total: 25 },
-    { name: "May", total: 22 },
-    { name: "Jun", total: 30 },
-  ]
+  // Calculate monthly inspection data from real inspections
+  const calculateMonthlyData = () => {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    const currentDate = new Date()
+    const currentYear = currentDate.getFullYear()
+    const currentMonth = currentDate.getMonth()
+
+    // Initialize data for the last 6 months
+    const monthlyData: { name: string; total: number }[] = []
+
+    for (let i = 5; i >= 0; i--) {
+      const monthIndex = (currentMonth - i + 12) % 12
+      const year = currentMonth - i < 0 ? currentYear - 1 : currentYear
+
+      // Count inspections for this month
+      const monthlyCount = inspections.filter((inspection: InspectionData) => {
+        const inspectionDate = new Date(inspection.inspectionDate)
+        return (
+          inspectionDate.getMonth() === monthIndex &&
+          inspectionDate.getFullYear() === year
+        )
+      }).length
+
+      monthlyData.push({
+        name: monthNames[monthIndex],
+        total: monthlyCount
+      })
+    }
+
+    return monthlyData
+  }
+
+  const monthlyData = calculateMonthlyData()
 
   const statusData = [
     { name: "Completed", value: totalInspections - 2, fill: "#10b981" },
