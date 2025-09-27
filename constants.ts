@@ -49,6 +49,14 @@ export const PREDEFINED_SERVICES: PredefinedService[] = [
   { name: 'Commercial Inspection (per sqm)', description: 'Commercial Property Inspection', unitPrice: 2 },
 ];
 
+// Invoice Configuration Constants
+export const DEFAULT_INVOICE_CONFIG = {
+  currency: 'OMR',
+  vatRate: 5, // 5% VAT
+  residentialRate: 1.5, // OMR per m²
+  commercialRate: 2.0, // OMR per m²
+};
+
 export const MOCK_CLIENTS: Client[] = [
     {
         id: 'client_1',

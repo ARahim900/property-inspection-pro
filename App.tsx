@@ -16,47 +16,15 @@ import { INSPECTION_CATEGORIES, MOCK_CLIENTS } from "./constants"
 
 import { useInspections } from "./hooks/use-inspections"
 import { useClients } from "./hooks/use-clients"
+import { useInvoices } from "./hooks/use-invoices"
 import { useAuth, AuthProvider } from "./hooks/use-auth"
 import { ClientSection } from "./components/client-section"
 import { EnhancedInspectionForm } from "./components/enhanced-inspection-form"
+import { InvoiceSection } from "./components/invoice-section"
 
 // Removed local useClients hook - now using Supabase-based hook from hooks/use-clients.tsx
 
-const useInvoices = () => {
-  const getInvoices = (): Invoice[] => {
-    try {
-      if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
-        const invoices = JSON.parse(localStorage.getItem("invoices") || "[]") as Invoice[]
-        return invoices.sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime())
-      }
-      return []
-    } catch (error) {
-      console.error("Error parsing invoices from localStorage", error)
-      return []
-    }
-  }
 
-  const getInvoiceById = (id: string): Invoice | null => {
-    return getInvoices().find((inv) => inv.id === id) || null
-  }
-
-  const saveInvoice = (invoiceData: Invoice): void => {
-    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
-      const invoices = getInvoices().filter((inv) => inv.id !== invoiceData.id)
-      invoices.push(invoiceData)
-      localStorage.setItem("invoices", JSON.stringify(invoices))
-    }
-  }
-
-  const deleteInvoice = (id: string): void => {
-    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
-      const invoices = getInvoices().filter((inv) => inv.id !== id)
-      localStorage.setItem("invoices", JSON.stringify(invoices))
-    }
-  }
-
-  return { getInvoices, getInvoiceById, saveInvoice, deleteInvoice }
-}
 
 const useAppSettings = () => {
   const defaultAvatar = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#cbd5e1"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>')}`
@@ -1506,13 +1474,7 @@ const SimplePieChart: React.FC<{ data: { name: string; value: number; fill: stri
 const DashboardOverview: React.FC = () => {
   const { inspections } = useInspections()
   const { clients } = useClients()
-  const { getInvoices } = useInvoices()
-
-  const [invoices, setInvoices] = useState<Invoice[]>([])
-
-  useEffect(() => {
-    setInvoices(getInvoices())
-  }, [])
+  const { invoices } = useInvoices()
 
   // Calculate stats
   const totalInspections = inspections.length
@@ -1797,7 +1759,7 @@ const App: React.FC = () => {
       case "clients":
         return <ClientSection />
       case "invoices":
-        return <PlaceholderPage title="Invoice Management" />
+        return <InvoiceSection />
       case "settings":
         return <PlaceholderPage title="Settings" />
       default:

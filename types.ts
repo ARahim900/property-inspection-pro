@@ -58,6 +58,14 @@ export interface InvoiceServiceItem {
 }
 
 export type InvoiceStatus = 'Paid' | 'Unpaid' | 'Partial' | 'Draft';
+export type PropertyInspectionType = 'Residential' | 'Commercial';
+
+export interface InvoiceConfig {
+  currency: string;
+  vatRate: number; // as percentage (e.g., 5 for 5%)
+  residentialRate: number; // OMR per m²
+  commercialRate: number; // OMR per m²
+}
 
 export interface Invoice {
   id: string;
@@ -69,6 +77,8 @@ export interface Invoice {
   clientAddress: string;
   clientEmail: string;
   propertyLocation: string;
+  propertyType?: PropertyInspectionType;
+  propertyArea?: number; // in square meters
   services: InvoiceServiceItem[];
   subtotal: number;
   tax: number;
@@ -76,7 +86,8 @@ export interface Invoice {
   amountPaid: number;
   status: InvoiceStatus;
   notes?: string;
-  template?: 'classic' | 'modern' | 'compact';
+
+  config?: InvoiceConfig;
 }
 
 // New type for Application Settings

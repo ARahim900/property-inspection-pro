@@ -60,7 +60,7 @@ export function useInvoices() {
           amountPaid: Number.parseFloat(invoice.amount_paid),
           status: invoice.status,
           notes: invoice.notes,
-          template: invoice.template || "classic",
+
         })) || []
 
       setInvoices(transformedInvoices)
