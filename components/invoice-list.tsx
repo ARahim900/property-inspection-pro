@@ -8,7 +8,7 @@ interface InvoiceListProps {
   invoices: Invoice[]
   onEdit: (invoice: Invoice) => void
   onDelete: (id: string) => void
-  onExportPDF: (invoice: Invoice) => void
+  onExportPDF: (invoice: Invoice) => Promise<void>
   loading?: boolean
 }
 
