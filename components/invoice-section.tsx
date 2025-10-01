@@ -51,9 +51,9 @@ export function InvoiceSection() {
     }
   }
 
-  const handleExportPDF = (invoice: Invoice) => {
+  const handleExportPDF = async (invoice: Invoice) => {
     try {
-      generateInvoicePDF(invoice)
+      await generateInvoicePDF(invoice)
     } catch (error) {
       console.error('Error generating PDF:', error)
       alert('Failed to generate PDF. Please try again.')

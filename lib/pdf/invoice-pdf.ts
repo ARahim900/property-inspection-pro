@@ -1,5 +1,3 @@
-import jsPDF from 'jspdf'
-import 'jspdf-autotable'
 import type { Invoice } from '@/types'
 
 // Extend jsPDF type to include autoTable
@@ -9,7 +7,11 @@ declare module 'jspdf' {
   }
 }
 
-export function generateInvoicePDF(invoice: Invoice): void {
+export async function generateInvoicePDF(invoice: Invoice): Promise<void> {
+  // Dynamically import pdf libraries to avoid SSR "window is not defined" errors
+  const { default: jsPDF } = await import('jspdf')
+  await import('jspdf-autotable')
+
   const doc = new jsPDF()
   const pageWidth = doc.internal.pageSize.width
   const pageHeight = doc.internal.pageSize.height
