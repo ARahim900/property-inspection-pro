@@ -259,12 +259,12 @@ export function ClientSection({
   }, [alertMessage])
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-4 sm:space-y-6 px-2 sm:px-4 md:px-0 ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <User className="w-6 h-6" />
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <User className="w-5 h-5 sm:w-6 sm:h-6" />
             Client Management
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
@@ -334,14 +334,14 @@ export function ClientSection({
               filteredClients.map((client) => (
                 <div
                   key={client.id}
-                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                  className={`p-2 sm:p-3 rounded-lg border cursor-pointer transition-colors ${
                     selectedClient?.id === client.id
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
                       : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                   }`}
                   onClick={() => handleClientSelect(client)}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <div>
                       <h3 className="font-medium text-slate-800 dark:text-slate-100">
                         {client.name}

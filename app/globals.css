@@ -1,8 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "../styles/navigation-override.css";
 
-@custom-variant dark (&:is(.dark *));
+@source "../{app,components,lib}/**/*.{js,jsx,ts,tsx}";
+@source "../App.tsx";
+
+@variant dark (&:is(.dark *));
 
 :root {
   --background: oklch(1 0 0);
@@ -130,5 +132,92 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Mobile Responsive Utilities */
+@layer utilities {
+  /* Container adjustments for mobile */
+  .mobile-container {
+    @apply px-4 mx-auto max-w-full;
+  }
+
+  /* Responsive grid utilities */
+  .responsive-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4;
+  }
+
+  .responsive-grid-2 {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+  }
+
+  /* Responsive flex utilities */
+  .responsive-flex {
+    @apply flex flex-col sm:flex-row gap-4;
+  }
+
+  /* Text size adjustments for mobile */
+  .responsive-text-xl {
+    @apply text-lg sm:text-xl md:text-2xl;
+  }
+
+  .responsive-text-2xl {
+    @apply text-xl sm:text-2xl md:text-3xl;
+  }
+
+  /* Card adjustments for mobile */
+  .responsive-card {
+    @apply w-full overflow-hidden;
+  }
+
+  /* Table responsiveness */
+  .responsive-table-container {
+    @apply w-full overflow-x-auto -mx-4 sm:mx-0;
+  }
+
+  /* Chart container adjustments */
+  .responsive-chart {
+    @apply w-full h-64 sm:h-80 md:h-96;
+  }
+
+  /* Sidebar adjustments */
+  .mobile-sidebar {
+    @apply fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300;
+  }
+
+  /* Spacing adjustments for mobile */
+  .mobile-spacing {
+    @apply space-y-4 sm:space-y-6;
+  }
+
+  /* Button adjustments for mobile */
+  .responsive-button {
+    @apply w-full sm:w-auto;
+  }
+}
+
+/* Scrollbar styling */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.439 0 0) oklch(0.269 0 0);
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: oklch(0.269 0 0);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: oklch(0.439 0 0);
+    border-radius: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.556 0 0);
   }
 }

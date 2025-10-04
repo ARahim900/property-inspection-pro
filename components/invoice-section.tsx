@@ -100,13 +100,13 @@ export function InvoiceSection() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-4 sm:py-6">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-6">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100">
                 Invoice Management
               </h1>
               <p className="text-slate-600 dark:text-slate-400 mt-1">
@@ -115,7 +115,7 @@ export function InvoiceSection() {
             </div>
             <button
               onClick={handleCreateNew}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2"
+              className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm transition-colors flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -125,8 +125,8 @@ export function InvoiceSection() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm border dark:border-slate-700">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-lg shadow-sm border dark:border-slate-700">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
@@ -144,7 +144,7 @@ export function InvoiceSection() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm border dark:border-slate-700">
+            <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-lg shadow-sm border dark:border-slate-700">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
@@ -162,7 +162,7 @@ export function InvoiceSection() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm border dark:border-slate-700">
+            <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-lg shadow-sm border dark:border-slate-700">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
@@ -180,7 +180,7 @@ export function InvoiceSection() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm border dark:border-slate-700">
+            <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-lg shadow-sm border dark:border-slate-700">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600 dark:text-slate-400">

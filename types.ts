@@ -30,6 +30,7 @@ export interface InspectionData {
   inspectionDate: string;
   areas: InspectionArea[];
   aiSummary?: string;
+  status?: 'Scheduled' | 'In Progress' | 'Completed' | 'Cancelled';
 }
 
 // New types for Invoicing and Client Management

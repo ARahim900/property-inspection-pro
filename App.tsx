@@ -21,6 +21,35 @@ import { useAuth, AuthProvider } from "./hooks/use-auth"
 import { ClientSection } from "./components/client-section"
 import { EnhancedInspectionForm } from "./components/enhanced-inspection-form"
 import { InvoiceSection } from "./components/invoice-section"
+import { SettingsSection } from "./components/settings-section"
+
+import { WaslaLogo } from "./components/wasla-logo"
+import { PropertiesSection } from "./components/properties-section"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "./components/ui/sidebar"
+import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar"
+import { Button } from "./components/ui/button"
+import { cn } from "./lib/utils"
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "./components/ui/chart"
+import { LayoutDashboard, ClipboardCheck, Users, Building2, FileText, Settings2, Sun, Moon, ArrowUpRight, ArrowDownRight, Minus, CircleDollarSign, Wallet, CheckCircle } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+import { Area, Bar, CartesianGrid, ComposedChart, Pie, PieChart, Cell, XAxis, YAxis } from "recharts"
 
 // Removed local useClients hook - now using Supabase-based hook from hooks/use-clients.tsx
 
@@ -169,18 +198,34 @@ const formatCurrency = (amount: number, currency = "OMR") => {
   return currency ? `${currency} ${formattedAmount}` : formattedAmount
 }
 
+const formatCompactNumber = (value: number) => {
+  if (!Number.isFinite(value)) {
+    return "0"
+  }
+  const absValue = Math.abs(value)
+  if (absValue >= 1_000_000) {
+    const formatted = (value / 1_000_000).toFixed(1).replace(/\.0$/, "")
+    return `${formatted}M`
+  }
+  if (absValue >= 1_000) {
+    const formatted = (value / 1_000).toFixed(1).replace(/\.0$/, "")
+    return `${formatted}k`
+  }
+  return Math.round(value).toLocaleString()
+}
+
 // --- UI Components ---
 const buttonClasses = {
   primary:
-    "bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:bg-blue-400",
+    "bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed",
   secondary:
-    "bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-500 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-900",
+    "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 font-medium py-2.5 px-5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-600",
   destructive:
-    "bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-900",
+    "bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2",
 }
 
 const inputClasses =
-  "block w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+  "block w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition-colors"
 
 // Alert Circle Icon Component
 const AlertCircle: React.FC<{ className?: string }> = ({ className = "" }) => (
@@ -811,15 +856,6 @@ const InspectionForm: React.FC<{ inspectionId?: string; onSave: () => void; onCa
   )
 }
 
-const WaslaLogo: React.FC = () => (
-  <div className="text-center">
-    <h2 className="text-2xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">
-      WASLA
-    </h2>
-    <p className="text-xs font-semibold tracking-wide text-teal-700 dark:text-teal-400">Property Solutions</p>
-  </div>
-)
-
 const ReportTemplate: React.FC<{ inspection: InspectionData }> = ({ inspection }) => {
   // This component is now only used for the hidden print view.
   // PDF generation is handled programmatically by WaslaReportGenerator.
@@ -1255,8 +1291,8 @@ const InspectionsDashboard: React.FC<{
   }
 
   return (
-    <div className="w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+    <div className="w-full px-2 sm:px-4 md:px-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
         <div className="flex items-center gap-4 w-full sm:w-auto">
           <div className="flex-grow">
             <label htmlFor="propertyTypeFilter" className="sr-only">
@@ -1276,39 +1312,45 @@ const InspectionsDashboard: React.FC<{
             </select>
           </div>
         </div>
-        <button onClick={onCreate} className={buttonClasses.primary}>
+        <button onClick={onCreate} className={`${buttonClasses.primary} w-full sm:w-auto`}>
           New Inspection
         </button>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border dark:border-slate-700">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
         {filteredInspections.length > 0 ? (
-          <ul className="divide-y divide-slate-200 dark:divide-slate-700">
+          <ul className="divide-y divide-gray-100 dark:divide-slate-700">
             {filteredInspections.map((insp: InspectionData) => (
               <li
                 key={insp.id}
-                className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                className="p-4 sm:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-all duration-200"
               >
-                <div>
-                  <h3 className="font-semibold text-lg text-blue-700 dark:text-blue-400">{insp.propertyLocation}</h3>
-                  <p className="text-slate-600 dark:text-slate-300">Client: {insp.clientName}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Date: {formatDate(insp.inspectionDate)} | Type: {insp.propertyType}
-                  </p>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base sm:text-lg text-gray-900 dark:text-slate-50 mb-1.5">{insp.propertyLocation}</h3>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <p className="text-sm text-gray-600 dark:text-slate-300 font-medium">{insp.clientName}</p>
+                    <span className="text-gray-300 dark:text-slate-600">•</span>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">
+                      {formatDate(insp.inspectionDate)}
+                    </p>
+                    <span className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
+                      {insp.propertyType}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex gap-2 self-end md:self-center">
-                  <button onClick={() => onView(insp.id)} className={buttonClasses.secondary}>
+                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto self-end md:self-center flex-shrink-0">
+                  <button onClick={() => onView(insp.id)} className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-600">
                     View Report
                   </button>
                   <button
                     onClick={() => onEdit(insp.id)}
-                    className="bg-blue-100 dark:bg-blue-900/50 hover:bg-blue-200 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-300 font-semibold py-2 px-4 rounded-lg text-sm transition-colors"
+                    className="px-3 sm:px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900/50"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDeleteRequest(insp.id)}
-                    className="bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-900 text-red-800 dark:text-red-300 font-semibold py-2 px-4 rounded-lg text-sm transition-colors"
+                    className="px-3 sm:px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors dark:bg-red-900/30 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900/50"
                   >
                     Delete
                   </button>
@@ -1349,126 +1391,72 @@ const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
 )
 
 // --- New Dashboard Components ---
-const StatCard: React.FC<{
+type TrendDirection = "up" | "down" | "steady"
+
+const MetricCard: React.FC<{
   title: string
   value: string
-  change: string
-  changeType: "increase" | "decrease"
-  icon: React.ReactNode
-  color: string
-}> = ({ title, value, change, changeType, icon, color }) => {
-  const isIncrease = changeType === "increase"
-  return (
-    <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center gap-5">
-      <div className={`flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full ${color}`}>{icon}</div>
-      <div>
-        <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</h4>
-        <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{value}</p>
-        {change && (
-          <div className={`text-sm flex items-center mt-1 ${isIncrease ? "text-green-500" : "text-red-500"}`}>
-            {isIncrease ? (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4 mr-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" />
-              </svg>
-            ) : (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4 mr-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            )}
-            {change}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// Replaced Recharts with simple HTML/CSS charts
-const SimpleBarChart: React.FC<{ data: { name: string; total: number }[] }> = ({ data }) => {
-  const maxValue = Math.max(...data.map((d) => d.total), 1) // Ensure at least 1 to avoid division by zero
+  subtitle: string
+  icon: LucideIcon
+  accent: string
+  trend: {
+    direction: TrendDirection
+    label: string
+  }
+}> = ({ title, value, subtitle, icon: Icon, accent, trend }) => {
+  const TrendIcon =
+    trend.direction === "up" ? ArrowUpRight : trend.direction === "down" ? ArrowDownRight : Minus
+  const trendColor =
+    trend.direction === "up"
+      ? "text-emerald-600 dark:text-emerald-400"
+      : trend.direction === "down"
+        ? "text-rose-600 dark:text-rose-400"
+        : "text-slate-500 dark:text-slate-400"
 
   return (
-    <div className="h-72 flex items-end justify-between gap-2 p-4">
-      {data.map((item, index) => (
-        <div key={index} className="flex flex-col items-center flex-1">
-          <div
-            className="w-full bg-slate-200 dark:bg-slate-700 rounded-t-lg relative overflow-hidden"
-            style={{ height: "200px" }}
-          >
-            <div
-              className="bg-blue-500 w-full absolute bottom-0 rounded-t-lg transition-all duration-300"
-              style={{ height: maxValue > 0 ? `${(item.total / maxValue) * 100}%` : '0%' }}
-            />
-            <div className="absolute top-2 left-1/2 transform -translate-x-1/2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-              {item.total}
-            </div>
-          </div>
-          <div className="mt-2 text-xs text-slate-600 dark:text-slate-400 text-center">{item.name}</div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-const SimplePieChart: React.FC<{ data: { name: string; value: number; fill: string }[] }> = ({ data }) => {
-  const total = data.reduce((sum, item) => sum + item.value, 0)
-
-  return (
-    <div className="h-72 flex items-center justify-center">
-      <div className="relative w-48 h-48">
-        <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-          {data.map((item, index) => {
-            const percentage = (item.value / total) * 100
-            const strokeDasharray = `${percentage} ${100 - percentage}`
-            const strokeDashoffset = data.slice(0, index).reduce((sum, prev) => sum + (prev.value / total) * 100, 0)
-
-            return (
-              <circle
-                key={index}
-                cx="50"
-                cy="50"
-                r="15.915"
-                fill="transparent"
-                stroke={item.fill}
-                strokeWidth="8"
-                strokeDasharray={strokeDasharray}
-                strokeDashoffset={-strokeDashoffset}
-                className="transition-all duration-300"
-              />
-            )
-          })}
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-slate-900 dark:text-white">{total}</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Total</div>
-          </div>
-        </div>
-      </div>
-      <div className="ml-6 space-y-2">
-        {data.map((item, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.fill }} />
-            <span className="text-sm text-slate-600 dark:text-slate-400">
-              {item.name}: {item.value}
+    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-800">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <p className="text-sm font-medium text-gray-600 dark:text-slate-400">{title}</p>
+          <p className="mt-2 text-3xl font-semibold text-gray-900 dark:text-slate-50">{value}</p>
+          <div className="mt-3 flex items-center gap-2 text-sm">
+            <span className={`inline-flex items-center gap-1 font-medium ${trendColor}`}>
+              <TrendIcon className="size-4" aria-hidden="true" />
+              {trend.label}
             </span>
+            <span className="text-gray-500 dark:text-slate-400">{subtitle}</span>
           </div>
-        ))}
+        </div>
+        <div className={`rounded-lg p-3 ${accent}`}>
+          <Icon className="size-6" aria-hidden="true" />
+        </div>
       </div>
     </div>
   )
+}
+
+const buildTrend = (current: number, previous: number): { direction: TrendDirection; label: string } => {
+  if (!Number.isFinite(current) || !Number.isFinite(previous)) {
+    return { direction: "steady", label: "0%" }
+  }
+
+  if (previous === 0) {
+    if (current === 0) {
+      return { direction: "steady", label: "0%" }
+    }
+
+    return { direction: current > 0 ? "up" : "down", label: `${current > 0 ? "+" : "-"}100%` }
+  }
+
+  const raw = ((current - previous) / Math.abs(previous)) * 100
+  const rounded = Math.round(raw * 10) / 10
+
+  if (rounded === 0) {
+    return { direction: "steady", label: "0%" }
+  }
+
+  const label = `${rounded > 0 ? "+" : ""}${rounded.toFixed(1)}%`
+  return { direction: rounded > 0 ? "up" : "down", label }
 }
 
 const DashboardOverview: React.FC = () => {
@@ -1476,159 +1464,388 @@ const DashboardOverview: React.FC = () => {
   const { clients } = useClients()
   const { invoices } = useInvoices()
 
-  // Calculate stats
-  const totalInspections = inspections.length
-  const totalClients = clients.length
-  const totalRevenue = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0)
-  const pendingInvoices = invoices.filter((inv) => inv.status === "Unpaid").length
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
-  // Calculate monthly inspection data from real inspections
-  const calculateMonthlyData = () => {
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    const currentDate = new Date()
-    const currentYear = currentDate.getFullYear()
-    const currentMonth = currentDate.getMonth()
-
-    // Initialize data for the last 6 months
-    const monthlyData: { name: string; total: number }[] = []
-
-    for (let i = 5; i >= 0; i--) {
-      const monthIndex = (currentMonth - i + 12) % 12
-      const year = currentMonth - i < 0 ? currentYear - 1 : currentYear
-
-      // Count inspections for this month
-      const monthlyCount = inspections.filter((inspection: InspectionData) => {
-        const inspectionDate = new Date(inspection.inspectionDate)
-        return (
-          inspectionDate.getMonth() === monthIndex &&
-          inspectionDate.getFullYear() === year
-        )
-      }).length
-
-      monthlyData.push({
-        name: monthNames[monthIndex],
-        total: monthlyCount
-      })
+  const isWithinRange = (dateString: string, start: Date, end?: Date) => {
+    const parsed = new Date(dateString)
+    if (Number.isNaN(parsed.getTime())) {
+      return false
     }
-
-    return monthlyData
+    return parsed >= start && (!end || parsed < end)
   }
 
-  const monthlyData = calculateMonthlyData()
+  const inspectionsThisMonth = inspections.filter((inspection) =>
+    isWithinRange(inspection.inspectionDate, startOfMonth, endOfMonth),
+  )
+  const inspectionsPrevMonth = inspections.filter((inspection) =>
+    isWithinRange(inspection.inspectionDate, startOfPrevMonth, startOfMonth),
+  )
 
-  const statusData = [
-    { name: "Completed", value: totalInspections - 2, fill: "#10b981" },
-    { name: "In Progress", value: 2, fill: "#f59e0b" },
-    { name: "Scheduled", value: 1, fill: "#3b82f6" },
+  const activeClientsThisMonth = new Set(
+    inspectionsThisMonth.map((inspection) => inspection.clientName),
+  ).size
+  const activeClientsPrevMonth = new Set(
+    inspectionsPrevMonth.map((inspection) => inspection.clientName),
+  ).size
+
+  const revenueThisMonth = invoices
+    .filter((invoice) => isWithinRange(invoice.invoiceDate, startOfMonth, endOfMonth))
+    .reduce((sum, invoice) => sum + invoice.totalAmount, 0)
+
+  const revenuePrevMonth = invoices
+    .filter((invoice) => isWithinRange(invoice.invoiceDate, startOfPrevMonth, startOfMonth))
+    .reduce((sum, invoice) => sum + invoice.totalAmount, 0)
+
+  const outstandingBalance = invoices
+    .filter((invoice) => invoice.status !== "Paid")
+    .reduce((sum, invoice) => sum + Math.max(invoice.totalAmount - invoice.amountPaid, 0), 0)
+
+  const outstandingPrevBalance = invoices
+    .filter(
+      (invoice) =>
+        invoice.status !== "Paid" &&
+        isWithinRange(invoice.invoiceDate, startOfPrevMonth, startOfMonth),
+    )
+    .reduce((sum, invoice) => sum + Math.max(invoice.totalAmount - invoice.amountPaid, 0), 0)
+
+  const collectStatuses = (list: InspectionData[]) =>
+    list.reduce(
+      (acc, inspection) => {
+        inspection.areas.forEach((area) => {
+          area.items.forEach((item) => {
+            if (item.status === "Pass" || item.status === "Fail" || item.status === "N/A") {
+              acc[item.status] += 1
+            }
+          })
+        })
+        return acc
+      },
+      { Pass: 0, Fail: 0, "N/A": 0 } as Record<InspectionStatus, number>,
+    )
+
+  const statusCountsThisMonth = collectStatuses(inspectionsThisMonth)
+  const statusCountsPrevMonth = collectStatuses(inspectionsPrevMonth)
+  const statusCountsOverall = collectStatuses(inspections)
+
+  const evaluatedThisMonth = statusCountsThisMonth.Pass + statusCountsThisMonth.Fail
+  const evaluatedPrevMonth = statusCountsPrevMonth.Pass + statusCountsPrevMonth.Fail
+
+  const passRateCurrent =
+    evaluatedThisMonth > 0 ? (statusCountsThisMonth.Pass / evaluatedThisMonth) * 100 : 0
+  const passRatePrev =
+    evaluatedPrevMonth > 0 ? (statusCountsPrevMonth.Pass / evaluatedPrevMonth) * 100 : 0
+
+  const inspectionsTrend = buildTrend(inspectionsThisMonth.length, inspectionsPrevMonth.length)
+  const clientsTrend = buildTrend(activeClientsThisMonth, activeClientsPrevMonth)
+  const revenueTrend = buildTrend(revenueThisMonth, revenuePrevMonth)
+  const outstandingTrend = buildTrend(outstandingBalance, outstandingPrevBalance)
+  const passRateTrend = buildTrend(passRateCurrent, passRatePrev)
+
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ]
 
+  const monthlyPerformance: { month: string; inspections: number; revenue: number }[] = []
+  for (let i = 5; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const monthStart = new Date(date.getFullYear(), date.getMonth(), 1)
+    const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 1)
+    const monthLabel = monthNames[monthStart.getMonth()]
+    const monthInspections = inspections.filter((inspection) =>
+      isWithinRange(inspection.inspectionDate, monthStart, monthEnd),
+    ).length
+    const monthRevenue = invoices
+      .filter((invoice) => isWithinRange(invoice.invoiceDate, monthStart, monthEnd))
+      .reduce((sum, invoice) => sum + invoice.totalAmount, 0)
+
+    monthlyPerformance.push({
+      month: monthLabel,
+      inspections: monthInspections,
+      revenue: monthRevenue,
+    })
+  }
+
+  const statusDefinitions = [
+    { key: "pass", label: "Pass", value: statusCountsOverall.Pass, color: "hsl(142, 70%, 45%)" },
+    { key: "fail", label: "Fail", value: statusCountsOverall.Fail, color: "hsl(0, 84%, 60%)" },
+    { key: "na", label: "N/A", value: statusCountsOverall["N/A"], color: "hsl(215, 20%, 65%)" },
+  ] as const
+
+  const statusChartConfig = statusDefinitions.reduce(
+    (acc, item) => {
+      acc[item.key] = { label: item.label, color: item.color }
+      return acc
+    },
+    {} as Record<(typeof statusDefinitions)[number]["key"], { label: string; color: string }>,
+  )
+
+  const statusPieData = statusDefinitions.map((item) => ({
+    key: item.key,
+    label: item.label,
+    value: item.value,
+  }))
+
+  const totalFindings = statusDefinitions.reduce((sum, item) => sum + item.value, 0)
+  const passRateOverall =
+    totalFindings > 0 ? Math.round((statusCountsOverall.Pass / totalFindings) * 100) : 0
+
+  const performanceChartConfig = {
+    inspections: { label: "Inspections", color: "hsl(221, 83%, 53%)" },
+    revenue: { label: "Revenue (OMR)", color: "hsl(161, 73%, 46%)" },
+  } as const
+
+  const summarizeInspection = (inspection: InspectionData) =>
+    inspection.areas.reduce(
+      (acc, area) => {
+        area.items.forEach((item) => {
+          if (item.status === "Pass") {
+            acc.pass += 1
+          } else if (item.status === "Fail") {
+            acc.fail += 1
+          } else {
+            acc.na += 1
+          }
+        })
+        return acc
+      },
+      { pass: 0, fail: 0, na: 0 },
+    )
+
+  const recentInspections = inspections.slice(0, 5)
+
   return (
-    <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Total Inspections"
-          value={totalInspections.toString()}
-          change="+12% from last month"
-          changeType="increase"
-          color="bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400"
-          icon={
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-              />
-            </svg>
-          }
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 md:px-0">
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard
+          title="Inspections"
+          value={inspectionsThisMonth.length.toString()}
+          subtitle="vs last month"
+          icon={ClipboardCheck}
+          accent="bg-blue-500/10 text-blue-600 dark:text-blue-300"
+          trend={inspectionsTrend}
         />
-        <StatCard
-          title="Active Clients"
-          value={totalClients.toString()}
-          change="+5% from last month"
-          changeType="increase"
-          color="bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400"
-          icon={
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
-              />
-            </svg>
-          }
+        <MetricCard
+          title="Active clients"
+          value={activeClientsThisMonth.toString()}
+          subtitle={`vs last month � ${clients.length} total`}
+          icon={Users}
+          accent="bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"
+          trend={clientsTrend}
         />
-        <StatCard
-          title="Revenue"
-          value={formatCurrency(totalRevenue)}
-          change="+8% from last month"
-          changeType="increase"
-          color="bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400"
-          icon={
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-              />
-            </svg>
-          }
+        <MetricCard
+          title="Revenue (this month)"
+          value={formatCurrency(revenueThisMonth)}
+          subtitle="vs last month"
+          icon={CircleDollarSign}
+          accent="bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
+          trend={revenueTrend}
         />
-        <StatCard
-          title="Pending Invoices"
-          value={pendingInvoices.toString()}
-          change="-3% from last month"
-          changeType="decrease"
-          color="bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400"
-          icon={
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-          }
+        <MetricCard
+          title="Outstanding balance"
+          value={formatCurrency(outstandingBalance)}
+          subtitle="vs last month"
+          icon={Wallet}
+          accent="bg-amber-500/10 text-amber-600 dark:text-amber-300"
+          trend={outstandingTrend}
         />
       </div>
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Monthly Inspections</h3>
-          <SimpleBarChart data={monthlyData} />
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-2">
+        <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-50">Monthly Performance</h3>
+            <span className="text-xs text-gray-500 dark:text-slate-400">Last 6 months</span>
+          </div>
+          <ChartContainer config={performanceChartConfig} className="mt-4 sm:mt-8 h-64 sm:h-[320px] w-full overflow-x-auto">
+            <ComposedChart data={monthlyPerformance}>
+              <defs>
+                <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.5} />
+                  <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.05} />
+                </linearGradient>
+                <linearGradient id="fillInspections" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-inspections)" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="var(--color-inspections)" stopOpacity={0.6} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="stroke-slate-200 dark:stroke-slate-700" />
+              <XAxis dataKey="month" tickLine={false} axisLine={false} className="text-xs" />
+              <YAxis yAxisId="inspections" tickLine={false} axisLine={false} allowDecimals={false} className="text-xs" />
+              <YAxis
+                yAxisId="revenue"
+                orientation="right"
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => formatCompactNumber(value)}
+                className="text-xs"
+              />
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    className="rounded-lg border-slate-200 bg-white/95 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/95"
+                    formatter={(value, name) => {
+                      if (name === "revenue") {
+                        return [formatCurrency(Number(value)), "Revenue"]
+                      }
+                      return [String(value), "Inspections"]
+                    }}
+                  />
+                }
+              />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Bar
+                yAxisId="inspections"
+                dataKey="inspections"
+                radius={[10, 10, 0, 0]}
+                fill="url(#fillInspections)"
+                barSize={28}
+              />
+              <Area
+                yAxisId="revenue"
+                type="monotone"
+                dataKey="revenue"
+                stroke="var(--color-revenue)"
+                strokeWidth={3}
+                fill="url(#fillRevenue)"
+                activeDot={{ r: 6, strokeWidth: 2 }}
+              />
+            </ComposedChart>
+          </ChartContainer>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Inspection Status</h3>
-          <SimplePieChart data={statusData} />
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Recent Inspections</h3>
-        <div className="space-y-3">
-          {inspections.slice(0, 5).map((inspection: InspectionData) => (
-            <div
-              key={inspection.id}
-              className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg"
-            >
-              <div>
-                <p className="font-medium text-slate-900 dark:text-white">{inspection.propertyLocation}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {inspection.clientName} • {formatDate(inspection.inspectionDate)}
-                </p>
-              </div>
-              <span className="px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 rounded-full">
-                Completed
+        <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-50">Inspection Quality</h3>
+            <span className="text-xs text-gray-500 dark:text-slate-400">All inspections</span>
+          </div>
+          <div className="relative mt-4 sm:mt-8 h-64 sm:h-[320px]">
+            <ChartContainer config={statusChartConfig} className="h-full w-full overflow-visible">
+              <PieChart>
+                <Pie
+                  data={statusPieData}
+                  dataKey="value"
+                  nameKey="label"
+                  innerRadius={75}
+                  outerRadius={115}
+                  strokeWidth={0}
+                  paddingAngle={2}
+                >
+                  {statusPieData.map((item) => (
+                    <Cell key={item.key} fill={statusChartConfig[item.key].color} className="transition-all hover:opacity-80" />
+                  ))}
+                </Pie>
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      className="rounded-lg border-slate-200 bg-white/95 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/95"
+                      labelKey="label"
+                      formatter={(value) => [String(value), "Findings"]}
+                    />
+                  }
+                />
+                <ChartLegend verticalAlign="bottom" content={<ChartLegendContent nameKey="key" />} />
+              </PieChart>
+            </ChartContainer>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+              <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Pass Rate</span>
+              <span className="mt-1 bg-gradient-to-br from-emerald-600 to-blue-600 bg-clip-text text-4xl font-bold text-transparent dark:from-emerald-400 dark:to-blue-400">
+                {passRateOverall}%
+              </span>
+              <span className="text-xs text-slate-400">{totalFindings} total checks</span>
+              <span
+                className={`mt-2 inline-flex items-center gap-1 text-xs font-semibold ${
+                  passRateTrend.direction === "up"
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : passRateTrend.direction === "down"
+                      ? "text-rose-600 dark:text-rose-400"
+                      : "text-slate-500 dark:text-slate-400"
+                }`}
+              >
+                {passRateTrend.direction === "up" ? (
+                  <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                ) : passRateTrend.direction === "down" ? (
+                  <ArrowDownRight className="size-3.5" aria-hidden="true" />
+                ) : (
+                  <Minus className="size-3.5" aria-hidden="true" />
+                )}
+                {passRateTrend.label} vs last month
               </span>
             </div>
-          ))}
+          </div>
         </div>
+      </div>
+
+      <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-50">Recent Inspections</h3>
+          <span className="text-xs text-gray-500 dark:text-slate-400">Most recent {recentInspections.length} records</span>
+        </div>
+        {recentInspections.length > 0 ? (
+          <div className="space-y-3">
+            {recentInspections.map((inspection) => {
+              const summary = summarizeInspection(inspection)
+              const total = summary.pass + summary.fail + summary.na
+              const passShare = total > 0 ? Math.round((summary.pass / total) * 100) : 0
+
+              return (
+                <div
+                  key={inspection.id}
+                  className="flex flex-col gap-3 rounded-lg border border-gray-100 bg-gray-50 p-4 transition-colors hover:border-gray-200 dark:border-slate-700 dark:bg-slate-900/50 md:flex-row md:items-center md:justify-between"
+                >
+                  <div>
+                    <p className="text-base font-medium text-slate-900 dark:text-slate-50">
+                      {inspection.propertyLocation}
+                    </p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {inspection.clientName} � {formatDate(inspection.inspectionDate)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-500 dark:text-slate-400">
+                      <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                        <span className="inline-block size-2 rounded-full bg-emerald-500" />
+                        {summary.pass} pass
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-rose-500 dark:text-rose-400">
+                        <span className="inline-block size-2 rounded-full bg-rose-500" />
+                        {summary.fail} fail
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <span className="inline-block size-2 rounded-full bg-slate-400" />
+                        {summary.na} n/a
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 md:text-right">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
+                      {passShare}% pass
+                    </span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">
+                      {total} checkpoints
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed border-slate-200/70 bg-white/60 p-10 text-center dark:border-slate-700/60 dark:bg-slate-900/40">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              No inspections recorded yet. Create your first inspection to see live analytics here.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -1642,18 +1859,24 @@ const App: React.FC = () => {
   const [currentInspectionId, setCurrentInspectionId] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const { user, loading } = useAuth()
+  const { inspections } = useInspections()
   // Lazy import to avoid ssr import issues in non-next environments
   // Default to false to avoid premature redirects before config check completes
   const [supabaseConfigured, setSupabaseConfigured] = useState<boolean>(false)
 
   useEffect(() => {
-    setMounted(true)
-    // Load theme from localStorage after mounting
+    // Load theme from localStorage BEFORE mounting to prevent flicker
     if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
       const storedSettings = getSettings()
       setSettings(storedSettings)
-      document.documentElement.className = storedSettings.theme
+      // Apply theme immediately to prevent flicker
+      if (storedSettings.theme === 'dark') {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
     }
+    setMounted(true)
   }, [])
 
   useEffect(() => {
@@ -1672,7 +1895,12 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (mounted) {
-      document.documentElement.className = settings.theme
+      // Update theme using classList for better control
+      if (settings.theme === 'dark') {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
     }
   }, [settings.theme, mounted])
 
@@ -1758,90 +1986,201 @@ const App: React.FC = () => {
         )
       case "clients":
         return <ClientSection />
+      case "properties":
+        return <PropertiesSection />
       case "invoices":
         return <InvoiceSection />
       case "settings":
-        return <PlaceholderPage title="Settings" />
+        return <SettingsSection settings={settings} onSettingsUpdate={handleSettingsUpdate} />
       default:
         return <DashboardOverview />
     }
   }
 
-  const navigationItems = [
-    { id: "dashboard", label: "Dashboard", icon: "📊" },
-    { id: "inspections", label: "Inspections", icon: "🏠" },
-    { id: "clients", label: "Clients", icon: "👥" },
-    { id: "invoices", label: "Invoices", icon: "💰" },
-    { id: "settings", label: "Settings", icon: "⚙️" },
+  type NavigationItem = {
+    id: string
+    label: string
+    description?: string
+    icon: LucideIcon
+  }
+
+  const navigationItems: NavigationItem[] = [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      description: "Performance overview",
+      icon: LayoutDashboard,
+    },
+    {
+      id: "inspections",
+      label: "Inspections",
+      description: "Manage site visits",
+      icon: ClipboardCheck,
+    },
+    {
+      id: "clients",
+      label: "Clients",
+      description: "Relationship manager",
+      icon: Users,
+    },
+    {
+      id: "properties",
+      label: "Properties",
+      description: "Portfolio tracker",
+      icon: Building2,
+    },
+    {
+      id: "invoices",
+      label: "Invoices",
+      description: "Billing and payments",
+      icon: FileText,
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      description: "Team preferences",
+      icon: Settings2,
+    },
+    {
+      id: "form",
+      label: currentInspectionId ? "Edit Inspection" : "New Inspection",
+      description: currentInspectionId ? "Update inspection details" : "Create a new property inspection",
+      icon: ClipboardCheck,
+    },
+    {
+      id: "report",
+      label: "Inspection Report",
+      description: "View detailed report",
+      icon: FileText,
+    },
   ]
 
+  const activeNav = navigationItems.find((item) => item.id === currentView) ?? navigationItems[0]
+  const headerSubtitle = activeNav.description ?? "Workspace"
+
+  const getNameInitials = (value: string) =>
+    value
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part[0]?.toUpperCase())
+      .join("")
+      .slice(0, 2)
+
+  const userDisplayName = user?.email?.split("@")[0] || settings.profile.name
+  const userInitials = user?.email?.charAt(0).toUpperCase() || getNameInitials(settings.profile.name)
+  const scheduledInspections = inspections.filter((inspection) => inspection.status === "Scheduled").length
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">
-      {/* Header */}
-      <header className="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-4">
-              <WaslaLogo />
-              <div className="hidden sm:block">
-                <h1 className="text-xl font-bold text-slate-900 dark:text-white">Property Inspector Pro</h1>
+    <SidebarProvider>
+      <div className="flex min-h-screen bg-gray-50 dark:bg-slate-900">
+        <Sidebar collapsible="icon" className="border-r border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+          <SidebarHeader className="border-b border-gray-200 px-4 pb-4 pt-5 dark:border-slate-700">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-blue-500 p-2">
+                <WaslaLogo />
+              </div>
+              <div className="flex-1 space-y-0.5 group-data-[collapsible=icon]:hidden">
+                <p className="text-sm font-semibold text-gray-900 dark:text-slate-50">Property Inspector</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Professional</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() =>
-                  handleSettingsUpdate({ ...settings, theme: settings.theme === "dark" ? "light" : "dark" })
-                }
-                className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
-                aria-label="Toggle theme"
-              >
-                {mounted ? (settings.theme === "dark" ? "🌞" : "🌙") : "🌙"}
-              </button>
-              <div className="flex items-center gap-2">
-                <img
-                  src={settings.profile.avatar || "/placeholder.svg"}
-                  alt="Profile"
-                  className="w-8 h-8 rounded-full"
-                />
-                <span className="hidden sm:block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  {settings.profile.name}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="flex">
-        {/* Sidebar */}
-        <nav className="w-64 bg-white dark:bg-slate-800 shadow-sm border-r border-slate-200 dark:border-slate-700 min-h-[calc(100vh-4rem)]">
-          <div className="p-4">
-            <ul className="space-y-2">
-              {navigationItems.map((item) => (
-                <li key={item.id}>
-                  <button
+          </SidebarHeader>
+          <SidebarContent className="px-3 py-4">
+            <SidebarMenu className="gap-0.5">
+              {navigationItems.slice(0, 6).map((item) => (
+                <SidebarMenuItem key={item.id}>
+                  <SidebarMenuButton
                     onClick={() => setCurrentView(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                    isActive={currentView === item.id}
+                    tooltip={item.label}
+                    className={cn(
+                      "group relative items-center justify-start rounded-lg px-3 py-2 transition-colors",
                       currentView === item.id
-                        ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
-                        : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50"
-                    }`}
+                        ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+                        : "text-gray-700 hover:bg-gray-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                    )}
                   >
-                    <span className="text-lg">{item.icon}</span>
-                    {item.label}
-                  </button>
-                </li>
+                    <item.icon className="size-5 shrink-0" aria-hidden="true" />
+                    <span className="ml-3 font-medium group-data-[collapsible=icon]:hidden">{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               ))}
-            </ul>
+            </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter className="border-t border-gray-200 p-4 dark:border-slate-700">
+            <div className="group-data-[collapsible=icon]:hidden">
+              <div className="rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 border border-blue-100 dark:border-blue-800/30">
+                <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-2">Scheduled Inspections</p>
+                <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{scheduledInspections}</p>
+                <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-1.5 flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Awaiting site visits
+                </p>
+              </div>
+            </div>
+          </SidebarFooter>
+        </Sidebar>
+        <SidebarInset>
+          <div className="flex min-h-screen flex-col">
+            <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/95">
+              <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center gap-4">
+                  <SidebarTrigger className="md:hidden" />
+                  <div>
+                    <h1 className="text-xl font-semibold text-gray-900 dark:text-slate-50">{activeNav.label}</h1>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 rounded-lg"
+                    onClick={() =>
+                      handleSettingsUpdate({
+                        ...settings,
+                        theme: settings.theme === "dark" ? "light" : "dark",
+                      })
+                    }
+                    aria-label="Toggle theme"
+                  >
+                    {mounted ? (
+                      settings.theme === "dark" ? (
+                        <Sun className="size-5" aria-hidden="true" />
+                      ) : (
+                        <Moon className="size-5" aria-hidden="true" />
+                      )
+                    ) : (
+                      <Sun className="size-5" aria-hidden="true" />
+                    )}
+                  </Button>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="size-9">
+                      <AvatarImage src={settings.profile.avatar} alt={userDisplayName} />
+                      <AvatarFallback className="bg-blue-500 text-white text-sm font-medium">
+                        {userInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="hidden sm:block">
+                      <p className="text-sm font-medium text-gray-900 dark:text-slate-50">
+                        {userDisplayName}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">
+                        {user?.email || settings.profile.email}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </header>
+            <main className="flex-1 bg-gray-50 px-4 py-6 dark:bg-slate-900 sm:px-6 lg:px-8">
+              <div className="mx-auto w-full max-w-[1600px]">{renderContent()}</div>
+            </main>
           </div>
-        </nav>
-
-        {/* Main Content */}
-        <main className="flex-1 p-6">
-          <div className="max-w-7xl mx-auto">{renderContent()}</div>
-        </main>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   )
 }
 
@@ -1855,3 +2194,6 @@ const AppWithAuth: React.FC = () => {
 }
 
 export default AppWithAuth
+
+
+

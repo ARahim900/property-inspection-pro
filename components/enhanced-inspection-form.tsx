@@ -472,9 +472,10 @@ export function EnhancedInspectionForm({
   // Show loading spinner
   if (loading && inspectionId) {
     return (
-      <div className="text-center p-8">
-        <RefreshCw className="w-8 h-8 animate-spin mx-auto text-blue-600 dark:text-blue-400" />
-        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading inspection...</p>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="rounded-full bg-gradient-to-br from-blue-500 to-emerald-500 p-4 shadow-xl shadow-blue-500/30">
+          <RefreshCw className="h-8 w-8 animate-spin text-white" />
+        </div>
       </div>
     )
   }
@@ -482,15 +483,24 @@ export function EnhancedInspectionForm({
   // Show error message if inspection not found
   if (notFound) {
     return (
-      <div className="text-center p-8">
-        <div className="text-red-600 dark:text-red-400">
-          <AlertCircle className="w-12 h-12 mx-auto mb-4" />
-          <p className="text-lg font-semibold">Inspection not found</p>
-          <p className="mt-2">The inspection you're looking for doesn't exist or has been deleted.</p>
-          <Button onClick={onCancel} variant="outline" className="mt-4">
-            Go Back
-          </Button>
-        </div>
+      <div className="flex min-h-[400px] items-center justify-center p-8">
+        <Card className="max-w-md overflow-hidden border-rose-200/70 shadow-xl dark:border-rose-800/60">
+          <CardContent className="pt-12 pb-8 text-center">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-600 shadow-lg shadow-rose-500/30">
+              <AlertCircle className="h-10 w-10 text-white" />
+            </div>
+            <h3 className="mb-2 text-2xl font-bold text-slate-900 dark:text-slate-50">Inspection Not Found</h3>
+            <p className="mb-6 text-slate-600 dark:text-slate-400">
+              The inspection you're looking for doesn't exist or has been deleted.
+            </p>
+            <Button
+              onClick={onCancel}
+              className="bg-gradient-to-r from-blue-500 to-emerald-500 text-white shadow-lg hover:from-blue-600 hover:to-emerald-600"
+            >
+              Go Back
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }

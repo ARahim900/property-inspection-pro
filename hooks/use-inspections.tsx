@@ -49,6 +49,7 @@ export function useInspections() {
         inspectorName: inspection.inspector_name,
         inspectionDate: inspection.inspection_date,
         aiSummary: inspection.ai_summary,
+        status: inspection.status || 'Scheduled',
         areas: (inspection.inspection_areas || []).map((area: any) => ({
           id: area.id,
           name: area.name,
@@ -101,7 +102,7 @@ export function useInspections() {
             property_type: inspection.propertyType,
             inspector_name: inspection.inspectorName,
             inspection_date: inspection.inspectionDate,
-            ai_summary: inspection.aiSummary,
+            status: inspection.status || 'Scheduled',
             updated_at: new Date().toISOString()
           })
           .eq("id", inspection.id)
@@ -126,7 +127,7 @@ export function useInspections() {
             property_type: inspection.propertyType,
             inspector_name: inspection.inspectorName,
             inspection_date: inspection.inspectionDate,
-            ai_summary: inspection.aiSummary
+            status: inspection.status || 'Scheduled'
           })
           .select()
           .single()
