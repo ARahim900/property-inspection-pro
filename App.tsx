@@ -812,18 +812,12 @@ const InspectionForm: React.FC<{ inspectionId?: string; onSave: () => void; onCa
 }
 
 const WaslaLogo: React.FC = () => (
-  <div className="flex items-center gap-3">
+  <div className="flex items-center">
     <img
       src="/logo.jpg"
       alt="Wasla Property Solutions Logo"
-      className="h-12 w-12 rounded-lg object-cover"
+      className="h-16 w-auto object-contain"
     />
-    <div className="text-left">
-      <h2 className="text-xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">
-        WASLA
-      </h2>
-      <p className="text-xs font-semibold tracking-wide text-teal-700 dark:text-teal-400">Property Solutions</p>
-    </div>
   </div>
 )
 
@@ -1788,15 +1782,14 @@ const App: React.FC = () => {
       <header className="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <img
                 src="/logo.jpg"
                 alt="Wasla Property Solutions"
-                className="h-10 w-10 rounded-lg object-cover"
+                className="h-12 sm:h-14 w-auto object-contain"
               />
-              <div className="hidden sm:block">
-                <h1 className="text-xl font-bold text-slate-900 dark:text-white">Property Inspector Pro</h1>
-                <p className="text-xs text-slate-600 dark:text-slate-400">Wasla Property Solutions</p>
+              <div className="hidden md:block border-l border-slate-300 dark:border-slate-600 pl-3">
+                <h1 className="text-lg font-bold text-slate-900 dark:text-white">Property Inspector Pro</h1>
               </div>
             </div>
             <div className="flex items-center gap-4">
