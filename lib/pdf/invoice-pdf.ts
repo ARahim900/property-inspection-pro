@@ -23,21 +23,21 @@ export async function generateInvoicePDF(invoice: Invoice): Promise<void> {
   const lightGray = [248, 250, 252] // Slate-50
   
   // Header
-  doc.setFillColor(...primaryColor)
+  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2])
   doc.rect(0, 0, pageWidth, 40, 'F')
-  
+
   // Company/Inspector Info (you can customize this)
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(24)
   doc.setFont('helvetica', 'bold')
   doc.text('PROPERTY INSPECTION', 20, 25)
-  
+
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
   doc.text('Professional Property Inspection Services', 20, 32)
-  
+
   // Invoice Title and Number
-  doc.setTextColor(...textColor)
+  doc.setTextColor(textColor[0], textColor[1], textColor[2])
   doc.setFontSize(20)
   doc.setFont('helvetica', 'bold')
   doc.text('INVOICE', pageWidth - 20, 60, { align: 'right' })
@@ -57,7 +57,7 @@ export async function generateInvoicePDF(invoice: Invoice): Promise<void> {
   }
   
   const statusColor = statusColors[invoice.status] || statusColors['Draft']
-  doc.setFillColor(...statusColor)
+  doc.setFillColor(statusColor[0], statusColor[1], statusColor[2])
   doc.roundedRect(pageWidth - 60, 92, 40, 8, 2, 2, 'F')
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(8)
@@ -65,7 +65,7 @@ export async function generateInvoicePDF(invoice: Invoice): Promise<void> {
   doc.text(invoice.status.toUpperCase(), pageWidth - 40, 97.5, { align: 'center' })
   
   // Client Information
-  doc.setTextColor(...textColor)
+  doc.setTextColor(textColor[0], textColor[1], textColor[2])
   doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
   doc.text('Bill To:', 20, 60)
@@ -166,7 +166,7 @@ export async function generateInvoicePDF(invoice: Invoice): Promise<void> {
   // Total
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
-  doc.setDrawColor(...primaryColor)
+  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2])
   doc.line(totalsX, finalY + 15, pageWidth - 20, finalY + 15)
   doc.text('Total:', totalsX, finalY + 25)
   doc.text(formatCurrency(invoice.totalAmount, invoice.config?.currency), pageWidth - 20, finalY + 25, { align: 'right' })

@@ -353,9 +353,6 @@ export function EnhancedInspectionForm({
       // If client doesn't exist and we have a name, create a new client automatically
       if (!existingClient && inspectionData.clientName.trim()) {
         try {
-          // Import the saveClient function from useClients hook
-          const { saveClient } = await import('@/hooks/use-clients')
-
           // Create a new client with basic information
           const newClient: Client = {
             id: `client_${Date.now()}`,
@@ -375,12 +372,12 @@ export function EnhancedInspectionForm({
 
           // Save the new client to the database
           const supabase = createClient()
-          const { user } = await supabase.auth.getUser()
+          const { data: { user } } = await supabase.auth.getUser()
 
-          if (user?.data?.user) {
+          if (user) {
             await supabase.from("clients").insert({
               id: newClient.id,
-              user_id: user.data.user.id,
+              user_id: user.id,
               name: newClient.name,
               email: newClient.email,
               phone: newClient.phone,
@@ -392,7 +389,7 @@ export function EnhancedInspectionForm({
               await supabase.from("properties").insert({
                 id: newClient.properties[0].id,
                 client_id: newClient.id,
-                user_id: user.data.user.id,
+                user_id: user.id,
                 location: newClient.properties[0].location,
                 type: newClient.properties[0].type,
                 size: newClient.properties[0].size

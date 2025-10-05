@@ -105,7 +105,6 @@ export function useInvoices() {
             amount_paid: invoice.amountPaid,
             status: invoice.status,
             notes: invoice.notes,
-            template: invoice.template,
             updated_at: new Date().toISOString(),
           })
           .eq("id", invoice.id)
@@ -133,7 +132,6 @@ export function useInvoices() {
             amount_paid: invoice.amountPaid,
             status: invoice.status,
             notes: invoice.notes,
-            template: invoice.template,
           })
           .select("id")
           .single()
