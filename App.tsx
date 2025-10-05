@@ -816,7 +816,7 @@ const WaslaLogo: React.FC = () => (
     <img
       src="/logo.jpg"
       alt="Wasla Property Solutions Logo"
-      className="h-16 w-auto object-contain"
+      className="h-20 w-auto object-contain"
     />
   </div>
 )
@@ -1781,15 +1781,15 @@ const App: React.FC = () => {
       {/* Header */}
       <header className="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
+          <div className="flex justify-between items-center h-20 sm:h-24">
+            <div className="flex items-center gap-4">
               <img
                 src="/logo.jpg"
                 alt="Wasla Property Solutions"
-                className="h-12 sm:h-14 w-auto object-contain"
+                className="h-16 sm:h-20 w-auto object-contain"
               />
-              <div className="hidden md:block border-l border-slate-300 dark:border-slate-600 pl-3">
-                <h1 className="text-lg font-bold text-slate-900 dark:text-white">Property Inspector Pro</h1>
+              <div className="border-l border-slate-300 dark:border-slate-600 pl-4">
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Property Inspector Pro</h1>
               </div>
             </div>
             <div className="flex items-center gap-4">
